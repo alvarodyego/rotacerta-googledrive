@@ -1,0 +1,37 @@
+name: Publicar rotas a partir do Google Drive
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Configurar identidade do git
+        run: |
+          git config user.name "RotaCerta Bot"
+          git config user.email "rotacerta-bot@users.noreply.github.com"
+
+      - name: Rodar o vigia do Google Drive
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ vars.GOOGLE_DRIVE_FOLDER_ID }}
+          ORIGEM_LAT: ${{ vars.ORIGEM_LAT }}
+          ORIGEM_LON: ${{ vars.ORIGEM_LON }}
+        run: python googledrive_watch_and_publish.py
