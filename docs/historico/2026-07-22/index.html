@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#1f4e78">
-<title>Cargas otimizadas - PathFind</title>
+<title>Rotas de 22/07/2026 - PathFind</title>
 <style>
 :root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
 * { box-sizing: border-box; }
@@ -124,7 +124,7 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 </head>
 <body>
 <header>
-  <h1>Cargas otimizadas</h1>
+  <h1>Rotas de 22/07/2026</h1>
   <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
   <div class="sub">Atualizado em 27/07/2026 10:39</div>
 </header>
@@ -133,9 +133,9 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
   <select id="seletorAno" class="compacta"></select>
   <select id="seletorMes" class="compacta"></select>
   <select id="seletorData"><option value="2026-07-22">22/07/2026 (hoje)</option></select>
-  <a href="index.html">Ir para hoje</a>
+  <a href="../../index.html">Ir para hoje</a>
 </div>
-<a class="link-painel" href="painel.html">Ver painel do supervisor (todas as rotas)</a><main>
+<main>
   <ul class="lista-rotas">
     <li><a href="rotas/RMB-6G44-Motorista-725.html">RMB-6G44 - Motorista 725 <small>68 paradas &middot; 365.2 km</small></a></li>
     <li><a href="rotas/RMB-6G37-Motorista-723.html">RMB-6G37 - Motorista 723 <small>62 paradas &middot; 517.8 km</small></a></li>
@@ -150,7 +150,7 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 
 <script>
 const NOMES_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-fetch('historico/manifest.json').then(r => r.json()).then(dias => {
+fetch('../manifest.json').then(r => r.json()).then(dias => {
   const selAno = document.getElementById('seletorAno');
   const selMes = document.getElementById('seletorMes');
   const selDia = document.getElementById('seletorData');
@@ -211,7 +211,7 @@ fetch('historico/manifest.json').then(r => r.json()).then(dias => {
     popularDias(selAno.value, selMes.value);
   });
   selDia.addEventListener('change', () => {
-    if (selDia.value) window.location.href = 'historico/' + selDia.value + '/index.html';
+    if (selDia.value) window.location.href = '../' + selDia.value + '/index.html';
   });
 }).catch(() => {});
 
