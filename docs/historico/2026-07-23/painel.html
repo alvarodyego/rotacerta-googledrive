@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#1f4e78">
-<title>Administracao de senhas</title>
+<title>Painel do supervisor - 23/07/2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 :root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
@@ -125,7 +125,7 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 </head>
 <body class="bloqueado">
 <div class="bloqueio"><div class="bloqueio-caixa">
-  <h2>Administracao</h2>
+  <h2>Painel do supervisor</h2>
   <p>Digite a senha administrativa pra continuar.</p>
   <form id="formSenhaAdmin">
     <input type="password" id="campoSenhaAdmin" placeholder="Senha administrativa" autocomplete="current-password" required>
@@ -134,15 +134,16 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
   <div class="bloqueio-erro" id="bloqueioErroAdmin"></div>
 </div></div>
 <header>
-  <h1>Administracao de senhas</h1>
+  <h1>Painel do supervisor</h1>
   <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
+  <div class="sub">Rotas de 23/07/2026</div>
 </header>
 <div class="filtro-data">
   <label for="seletorAno">Ver rotas de:</label>
   <select id="seletorAno" class="compacta"></select>
   <select id="seletorMes" class="compacta"></select>
   <select id="seletorData"><option value="2026-07-23">23/07/2026 (hoje)</option></select>
-  <a href="admin.html">Ir para hoje</a>
+  <a href="../../painel.html">Ir para hoje</a>
 </div>
 <div class="filtro-motorista">
   <label for="seletorMotorista">Motorista:</label>
@@ -153,285 +154,35 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
   <div id="mapaGeral" class="mapa-geral"></div>
   <div id="legendaMotoristas" class="legenda-motoristas"></div>
 </details>
-<main>
-  <h2 class="secao-titulo">Ajustar rotas de hoje</h2>
-  <p style="font-size:0.78rem; color:#666; margin: 0 12px 10px 12px;">
-    Corrija motorista, veiculo, ordem de visita ou tire uma parada de uma rota
-    de hoje sem esperar um novo arquivo do PathFind. O km mostrado ao
-    motorista continua sendo o original; a pagina dele so' avisa que a rota
-    foi ajustada manualmente.
-  </p>
-  <div id="listaAjustes"></div>
-
-  <h2 class="secao-titulo">Senhas dos motoristas</h2>
-  <div class="admin-topo">
-    <button id="btnGerarPadrao">Gerar senha padrao pra todo mundo</button>
-  </div>
-  <div class="admin-msg" id="adminMsg"></div>
-  <div id="listaMotoristas"></div>
-  <div class="admin-linha" style="margin-top:16px;">
-    <span>Admin</span>
-    <input type="text" id="novaSenhaAdmin" placeholder="Nova senha administrativa">
-    <button id="btnSalvarAdmin">Salvar</button>
-  </div>
-</main>
+<main id="painel"></main>
+<div class="painel-atualizado" id="statusConexao">Conectando ao painel em tempo real...</div>
 <footer><a href="index.html">Ver lista de rotas</a></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-const NUMERO_MIN = 720;
-const NUMERO_MAX = 731;
+const ROTAS = [{"id": "RT001001", "rotulo": "RMB-6G40 - Motorista 721", "veiculo": "RMB-6G40", "motorista_numero": "721", "paradas": [{"seq": 1, "codigo": "01001114", "cliente": "REST DA BIRRINHA", "lat": -7.167577, "lon": -48.210799}, {"seq": 2, "codigo": "01000947", "cliente": "AM PM", "lat": -7.161707, "lon": -48.206355}, {"seq": 3, "codigo": "01002307", "cliente": "SOMBRA BELA", "lat": -7.163576, "lon": -48.204903}, {"seq": 4, "codigo": "01000514", "cliente": "BAR DO ZE 04", "lat": -7.160187, "lon": -48.199298}, {"seq": 5, "codigo": "01001410", "cliente": "HIPER NORTE", "lat": -7.160254, "lon": -48.199171}, {"seq": 6, "codigo": "01002923", "cliente": "ADEGA LUZ", "lat": -7.161258, "lon": -48.198171}, {"seq": 7, "codigo": "01000409", "cliente": "NADIR BAR", "lat": -7.160213, "lon": -48.196475}, {"seq": 8, "codigo": "01002321", "cliente": "REST PE DE AMENDOA", "lat": -7.158523, "lon": -48.196824}, {"seq": 9, "codigo": "01001543", "cliente": "ARAUJO MIX", "lat": -7.158726, "lon": -48.197398}, {"seq": 10, "codigo": "01000123", "cliente": "ADEGA DO ADAO", "lat": -7.158401, "lon": -48.193735}, {"seq": 11, "codigo": "01001906", "cliente": "COMERCIAL SANTOS", "lat": -7.158251, "lon": -48.190322}, {"seq": 12, "codigo": "01000985", "cliente": "SUPERMERCADO TORRES", "lat": -7.159063, "lon": -48.191196}, {"seq": 13, "codigo": "01002774", "cliente": "SUPER SACOLAO AS NEV", "lat": -7.159541, "lon": -48.188003}, {"seq": 14, "codigo": "01002808", "cliente": "BAR RECANTO DO SUCEG", "lat": -7.157206, "lon": -48.188336}, {"seq": 15, "codigo": "01000751", "cliente": "ADEGA DO APOLO", "lat": -7.156617, "lon": -48.188511}, {"seq": 16, "codigo": "01001510", "cliente": "CONVEN MARACANA", "lat": -7.156548, "lon": -48.1886}, {"seq": 17, "codigo": "01002726", "cliente": "NOSSA ADEGA", "lat": -7.153858, "lon": -48.188746}, {"seq": 18, "codigo": "01002054", "cliente": "MERCADEGA", "lat": -7.152313, "lon": -48.188982}, {"seq": 19, "codigo": "01001935", "cliente": "JARDEL BEBIDAS", "lat": -7.151319, "lon": -48.189139}, {"seq": 20, "codigo": "01000101", "cliente": "CASA D CARNE MARIANE", "lat": -7.152245, "lon": -48.190958}, {"seq": 21, "codigo": "01001521", "cliente": "BAR DO PEIXE", "lat": -7.154349, "lon": -48.191543}, {"seq": 22, "codigo": "01001215", "cliente": "DISTRIBUI ON LINE", "lat": -7.162726, "lon": -48.191233}, {"seq": 23, "codigo": "01002313", "cliente": "ADEGA IN CASA", "lat": -7.162527, "lon": -48.190701}, {"seq": 24, "codigo": "01001307", "cliente": "BAR DA DICA", "lat": -7.172059, "lon": -48.193588}, {"seq": 25, "codigo": "01002534", "cliente": "MERC BOM PRECO", "lat": -7.150195, "lon": -48.185261}, {"seq": 26, "codigo": "01002767", "cliente": "ESPETINHO DA IEDA", "lat": -7.149261, "lon": -48.186015}, {"seq": 27, "codigo": "01001275", "cliente": "CELSONS BAR", "lat": -7.162433, "lon": -48.206061}]}, {"id": "RT001002", "rotulo": "TVA-6H37 - Motorista 726", "veiculo": "TVA-6H37", "motorista_numero": "726", "paradas": [{"seq": 1, "codigo": "01001142", "cliente": "CAMPELO CENTRO", "lat": -7.189941, "lon": -48.208353}, {"seq": 2, "codigo": "01002172", "cliente": "ADEGA CANA BRAVA", "lat": -7.184421, "lon": -48.206624}, {"seq": 3, "codigo": "01002053", "cliente": "BAR DA ROSE", "lat": -7.180777, "lon": -48.205457}, {"seq": 4, "codigo": "01000299", "cliente": "BAR BOA IDEIA", "lat": -7.179686, "lon": -48.205554}, {"seq": 5, "codigo": "01002528", "cliente": "SUPERMERCADO NUNES", "lat": -7.18061, "lon": -48.205929}, {"seq": 6, "codigo": "01002562", "cliente": "BAR DOS AMIGOS    02", "lat": -7.180655, "lon": -48.207023}, {"seq": 7, "codigo": "01000591", "cliente": "BAR DO GALEGO", "lat": -7.179351, "lon": -48.20717}, {"seq": 8, "codigo": "01002871", "cliente": "ESPETINHO DA LU", "lat": -7.178308, "lon": -48.207491}, {"seq": 9, "codigo": "01000277", "cliente": "BAR DO ASSIS", "lat": -7.181868, "lon": -48.207329}, {"seq": 10, "codigo": "01002586", "cliente": "ADEGA TAJUBA      01", "lat": -7.185945, "lon": -48.209166}, {"seq": 11, "codigo": "01000800", "cliente": "CANARINHO CONVENIENC", "lat": -7.184618, "lon": -48.202575}, {"seq": 12, "codigo": "01001400", "cliente": "BAR DO CARNEIRO", "lat": -7.183168, "lon": -48.201491}, {"seq": 13, "codigo": "01002913", "cliente": "CASA DE CARNE ESTA01", "lat": -7.179346, "lon": -48.201268}, {"seq": 14, "codigo": "01001068", "cliente": "PADARIA DA HORA", "lat": -7.17887, "lon": -48.201033}, {"seq": 15, "codigo": "01002206", "cliente": "ADEGA DO GORDO", "lat": -7.179361, "lon": -48.200445}, {"seq": 16, "codigo": "01001149", "cliente": "SUPERMERCADO BRASIL", "lat": -7.17792, "lon": -48.20007}, {"seq": 17, "codigo": "01002215", "cliente": "ESPETINHO DA TIA", "lat": -7.179805, "lon": -48.199306}, {"seq": 18, "codigo": "01000003", "cliente": "BAR DO GAROTINHO", "lat": -7.191775, "lon": -48.202711}, {"seq": 19, "codigo": "01002529", "cliente": "BAR J M BABIDAS", "lat": -7.177254, "lon": -48.212336}, {"seq": 20, "codigo": "01001037", "cliente": "ELIOCAR ROSA", "lat": -7.175523, "lon": -48.211141}, {"seq": 21, "codigo": "01001608", "cliente": "ESPETINHO DO ZELIO", "lat": -7.173488, "lon": -48.209289}, {"seq": 22, "codigo": "01002295", "cliente": "CONVENIENCIA ROCHA", "lat": -7.173491, "lon": -48.209245}, {"seq": 23, "codigo": "01001607", "cliente": "BAR DO NELIO", "lat": -7.173676, "lon": -48.207576}, {"seq": 24, "codigo": "01001606", "cliente": "BAR DO CHICAO", "lat": -7.173325, "lon": -48.207335}, {"seq": 25, "codigo": "01002858", "cliente": "BOTECO DO ZEZINHO", "lat": -7.171485, "lon": -48.208181}, {"seq": 26, "codigo": "01002602", "cliente": "ADEGA E MERC CRISTAL", "lat": -7.178137, "lon": -48.214104}]}, {"id": "RT001003", "rotulo": "TVA-4H02 - Sem motorista definido", "veiculo": "TVA-4H02", "motorista_numero": null, "paradas": [{"seq": 1, "codigo": "", "cliente": "", "lat": -7.207362, "lon": -48.220166}, {"seq": 2, "codigo": "", "cliente": "", "lat": -7.20168, "lon": -48.214836}, {"seq": 3, "codigo": "", "cliente": "", "lat": -7.202105, "lon": -48.185581}]}];
 const DATA_ISO = '2026-07-23';
-const ROTAS_HOJE = [{"id": "RT001001", "rotulo": "RMB-6G40 - Motorista 721", "veiculo": "RMB-6G40", "motorista_numero": "721", "paradas": [{"seq": 1, "codigo": "01001114", "cliente": "REST DA BIRRINHA", "lat": -7.167577, "lon": -48.210799}, {"seq": 2, "codigo": "01000947", "cliente": "AM PM", "lat": -7.161707, "lon": -48.206355}, {"seq": 3, "codigo": "01002307", "cliente": "SOMBRA BELA", "lat": -7.163576, "lon": -48.204903}, {"seq": 4, "codigo": "01000514", "cliente": "BAR DO ZE 04", "lat": -7.160187, "lon": -48.199298}, {"seq": 5, "codigo": "01001410", "cliente": "HIPER NORTE", "lat": -7.160254, "lon": -48.199171}, {"seq": 6, "codigo": "01002923", "cliente": "ADEGA LUZ", "lat": -7.161258, "lon": -48.198171}, {"seq": 7, "codigo": "01000409", "cliente": "NADIR BAR", "lat": -7.160213, "lon": -48.196475}, {"seq": 8, "codigo": "01002321", "cliente": "REST PE DE AMENDOA", "lat": -7.158523, "lon": -48.196824}, {"seq": 9, "codigo": "01001543", "cliente": "ARAUJO MIX", "lat": -7.158726, "lon": -48.197398}, {"seq": 10, "codigo": "01000123", "cliente": "ADEGA DO ADAO", "lat": -7.158401, "lon": -48.193735}, {"seq": 11, "codigo": "01001906", "cliente": "COMERCIAL SANTOS", "lat": -7.158251, "lon": -48.190322}, {"seq": 12, "codigo": "01000985", "cliente": "SUPERMERCADO TORRES", "lat": -7.159063, "lon": -48.191196}, {"seq": 13, "codigo": "01002774", "cliente": "SUPER SACOLAO AS NEV", "lat": -7.159541, "lon": -48.188003}, {"seq": 14, "codigo": "01002808", "cliente": "BAR RECANTO DO SUCEG", "lat": -7.157206, "lon": -48.188336}, {"seq": 15, "codigo": "01000751", "cliente": "ADEGA DO APOLO", "lat": -7.156617, "lon": -48.188511}, {"seq": 16, "codigo": "01001510", "cliente": "CONVEN MARACANA", "lat": -7.156548, "lon": -48.1886}, {"seq": 17, "codigo": "01002726", "cliente": "NOSSA ADEGA", "lat": -7.153858, "lon": -48.188746}, {"seq": 18, "codigo": "01002054", "cliente": "MERCADEGA", "lat": -7.152313, "lon": -48.188982}, {"seq": 19, "codigo": "01001935", "cliente": "JARDEL BEBIDAS", "lat": -7.151319, "lon": -48.189139}, {"seq": 20, "codigo": "01000101", "cliente": "CASA D CARNE MARIANE", "lat": -7.152245, "lon": -48.190958}, {"seq": 21, "codigo": "01001521", "cliente": "BAR DO PEIXE", "lat": -7.154349, "lon": -48.191543}, {"seq": 22, "codigo": "01001215", "cliente": "DISTRIBUI ON LINE", "lat": -7.162726, "lon": -48.191233}, {"seq": 23, "codigo": "01002313", "cliente": "ADEGA IN CASA", "lat": -7.162527, "lon": -48.190701}, {"seq": 24, "codigo": "01001307", "cliente": "BAR DA DICA", "lat": -7.172059, "lon": -48.193588}, {"seq": 25, "codigo": "01002534", "cliente": "MERC BOM PRECO", "lat": -7.150195, "lon": -48.185261}, {"seq": 26, "codigo": "01002767", "cliente": "ESPETINHO DA IEDA", "lat": -7.149261, "lon": -48.186015}, {"seq": 27, "codigo": "01001275", "cliente": "CELSONS BAR", "lat": -7.162433, "lon": -48.206061}]}, {"id": "RT001002", "rotulo": "TVA-6H37 - Motorista 726", "veiculo": "TVA-6H37", "motorista_numero": "726", "paradas": [{"seq": 1, "codigo": "01001142", "cliente": "CAMPELO CENTRO", "lat": -7.189941, "lon": -48.208353}, {"seq": 2, "codigo": "01002172", "cliente": "ADEGA CANA BRAVA", "lat": -7.184421, "lon": -48.206624}, {"seq": 3, "codigo": "01002053", "cliente": "BAR DA ROSE", "lat": -7.180777, "lon": -48.205457}, {"seq": 4, "codigo": "01000299", "cliente": "BAR BOA IDEIA", "lat": -7.179686, "lon": -48.205554}, {"seq": 5, "codigo": "01002528", "cliente": "SUPERMERCADO NUNES", "lat": -7.18061, "lon": -48.205929}, {"seq": 6, "codigo": "01002562", "cliente": "BAR DOS AMIGOS    02", "lat": -7.180655, "lon": -48.207023}, {"seq": 7, "codigo": "01000591", "cliente": "BAR DO GALEGO", "lat": -7.179351, "lon": -48.20717}, {"seq": 8, "codigo": "01002871", "cliente": "ESPETINHO DA LU", "lat": -7.178308, "lon": -48.207491}, {"seq": 9, "codigo": "01000277", "cliente": "BAR DO ASSIS", "lat": -7.181868, "lon": -48.207329}, {"seq": 10, "codigo": "01002586", "cliente": "ADEGA TAJUBA      01", "lat": -7.185945, "lon": -48.209166}, {"seq": 11, "codigo": "01000800", "cliente": "CANARINHO CONVENIENC", "lat": -7.184618, "lon": -48.202575}, {"seq": 12, "codigo": "01001400", "cliente": "BAR DO CARNEIRO", "lat": -7.183168, "lon": -48.201491}, {"seq": 13, "codigo": "01002913", "cliente": "CASA DE CARNE ESTA01", "lat": -7.179346, "lon": -48.201268}, {"seq": 14, "codigo": "01001068", "cliente": "PADARIA DA HORA", "lat": -7.17887, "lon": -48.201033}, {"seq": 15, "codigo": "01002206", "cliente": "ADEGA DO GORDO", "lat": -7.179361, "lon": -48.200445}, {"seq": 16, "codigo": "01001149", "cliente": "SUPERMERCADO BRASIL", "lat": -7.17792, "lon": -48.20007}, {"seq": 17, "codigo": "01002215", "cliente": "ESPETINHO DA TIA", "lat": -7.179805, "lon": -48.199306}, {"seq": 18, "codigo": "01000003", "cliente": "BAR DO GAROTINHO", "lat": -7.191775, "lon": -48.202711}, {"seq": 19, "codigo": "01002529", "cliente": "BAR J M BABIDAS", "lat": -7.177254, "lon": -48.212336}, {"seq": 20, "codigo": "01001037", "cliente": "ELIOCAR ROSA", "lat": -7.175523, "lon": -48.211141}, {"seq": 21, "codigo": "01001608", "cliente": "ESPETINHO DO ZELIO", "lat": -7.173488, "lon": -48.209289}, {"seq": 22, "codigo": "01002295", "cliente": "CONVENIENCIA ROCHA", "lat": -7.173491, "lon": -48.209245}, {"seq": 23, "codigo": "01001607", "cliente": "BAR DO NELIO", "lat": -7.173676, "lon": -48.207576}, {"seq": 24, "codigo": "01001606", "cliente": "BAR DO CHICAO", "lat": -7.173325, "lon": -48.207335}, {"seq": 25, "codigo": "01002858", "cliente": "BOTECO DO ZEZINHO", "lat": -7.171485, "lon": -48.208181}, {"seq": 26, "codigo": "01002602", "cliente": "ADEGA E MERC CRISTAL", "lat": -7.178137, "lon": -48.214104}]}, {"id": "RT001003", "rotulo": "TVA-4H02 - Sem motorista definido", "veiculo": "TVA-4H02", "motorista_numero": null, "paradas": [{"seq": 1, "codigo": "", "cliente": "", "lat": -7.207362, "lon": -48.220166}, {"seq": 2, "codigo": "", "cliente": "", "lat": -7.20168, "lon": -48.214836}, {"seq": 3, "codigo": "", "cliente": "", "lat": -7.202105, "lon": -48.185581}]}];
 const ORIGEM_GERAL = {"lat": -7.22722092594843, "lon": -48.24978544427654};
-const adminMsgEl = document.getElementById('adminMsg');
+const painelEl = document.getElementById('painel');
+const statusConexaoEl = document.getElementById('statusConexao');
 
 let db = null;
 try {
   firebase.initializeApp({"apiKey": "AIzaSyDZpcc1GgdbknHdkuI4dOx1myDR6PsLPic", "authDomain": "rotacertaog.firebaseapp.com", "projectId": "rotacertaog", "storageBucket": "rotacertaog.firebasestorage.app", "messagingSenderId": "1048075742585", "appId": "1:1048075742585:web:424f99f9a29fa0f23593a8"});
   db = firebase.firestore();
 } catch (e) {
+  statusConexaoEl.textContent = 'Nao foi possivel conectar ao painel em tempo real.';
   console.error(e);
 }
 
-// Filtro de motorista: esconde os cards de "Ajustar rotas de hoje" que nao
-// batem, e filtra o que aparece no mapa combinado (que aqui usa sempre as
-// paradas originais do PathFind, sem juntar ajuste manual -- o objetivo do
-// mapa aqui e' so' ajudar a enxergar onde fica tudo enquanto edita).
-function aplicarFiltroMotorista(id) {
-  document.querySelectorAll('.ajuste-rota').forEach(card => {
-    card.style.display = (!id || card.dataset.rotaId === id) ? '' : 'none';
-  });
-}
-function gruposParaMapa(idFiltro) {
-  return ROTAS_HOJE.filter(r => !idFiltro || r.id === idFiltro).map(r => ({ rotulo: r.rotulo, paradas: r.paradas }));
-}
-popularFiltroMotorista(ROTAS_HOJE);
-
-function senhaPadrao(numero) {
-  return numero + 'OG' + (numero % 10);
-}
-
-function mensagem(texto, ehErro) {
-  adminMsgEl.textContent = texto;
-  adminMsgEl.style.color = ehErro ? '#c00000' : '#1e7e34';
-}
-
-function montarLinha(numero) {
-  const linha = document.createElement('div');
-  linha.className = 'admin-linha';
-  linha.innerHTML =
-    '<span>' + numero + '</span>' +
-    '<input type="text" id="senha-' + numero + '" placeholder="(sem senha definida)">' +
-    '<button data-numero="' + numero + '">Salvar</button>';
-  linha.querySelector('button').addEventListener('click', () => {
-    const valor = document.getElementById('senha-' + numero).value.trim();
-    if (!valor) { mensagem('Digite uma senha antes de salvar (motorista ' + numero + ').', true); return; }
-    db.collection('motoristas').doc(String(numero)).set({ senha: valor })
-      .then(() => mensagem('Senha do motorista ' + numero + ' salva.', false))
-      .catch(err => { mensagem('Erro ao salvar a senha do motorista ' + numero + '.', true); console.error(err); });
-  });
-  return linha;
-}
-
-
-// --- ajuste manual de rotas (motorista, veiculo, ordem, exclusao, mensagem) ---
-
-function montarCardAjuste(rota) {
-  const card = document.createElement('details');
-  card.className = 'ajuste-rota';
-  card.dataset.rotaId = rota.id;
-  card.innerHTML =
-    '<summary>' + rota.rotulo + ' <small>(' + rota.paradas.length + ' paradas)</small></summary>' +
-    '<div class="ajuste-campos">' +
-      '<div class="ajuste-campo">' +
-        '<label for="ajusteMotorista-' + rota.id + '">Motorista</label>' +
-        '<select id="ajusteMotorista-' + rota.id + '"></select>' +
-      '</div>' +
-      '<div class="ajuste-campo">' +
-        '<label for="ajusteVeiculo-' + rota.id + '">Veiculo (placa)</label>' +
-        '<input type="text" id="ajusteVeiculo-' + rota.id + '" placeholder="' + (rota.veiculo || 'sem veiculo') + '">' +
-      '</div>' +
-    '</div>' +
-    '<div class="ajuste-paradas" id="ajusteParadas-' + rota.id + '"></div>' +
-    '<div class="ajuste-botoes">' +
-      '<button class="btn-salvar">Salvar ajustes</button>' +
-      '<button class="btn-limpar">Limpar ajustes (voltar ao original)</button>' +
-    '</div>' +
-    '<div class="ajuste-status" id="ajusteStatus-' + rota.id + '"></div>';
-
-  const selMotorista = card.querySelector('#ajusteMotorista-' + rota.id);
-  const optManter = document.createElement('option');
-  optManter.value = '';
-  optManter.textContent = 'Manter original (' + (rota.motorista_numero || 'sem motorista') + ')';
-  selMotorista.appendChild(optManter);
-  for (let n = NUMERO_MIN; n <= NUMERO_MAX; n++) {
-    const opt = document.createElement('option');
-    opt.value = String(n);
-    opt.textContent = String(n);
-    selMotorista.appendChild(opt);
-  }
-
-  const paradasEl = card.querySelector('#ajusteParadas-' + rota.id);
-  rota.paradas.forEach(p => {
-    const linha = document.createElement('div');
-    linha.className = 'ajuste-parada';
-    linha.dataset.codigo = p.codigo;
-    linha.innerHTML =
-      '<input type="number" class="ap-pos" value="' + p.seq + '">' +
-      '<span class="ap-nome">' + p.seq + '. ' + p.cliente + ' <small>(' + p.codigo + ')</small></span>' +
-      '<label><input type="checkbox" class="ap-excluir"> excluir</label>' +
-      '<input type="text" class="ap-mensagem" placeholder="Mensagem pro motorista sobre esse pedido (opcional)">';
-    linha.querySelector('.ap-excluir').addEventListener('change', ev => {
-      linha.classList.toggle('ap-excluida', ev.target.checked);
-    });
-    paradasEl.appendChild(linha);
-  });
-
-  card.querySelector('.btn-salvar').addEventListener('click', () => salvarAjuste(rota));
-  card.querySelector('.btn-limpar').addEventListener('click', () => limparAjuste(rota));
-
-  return card;
-}
-
-function salvarAjuste(rota) {
-  const statusEl = document.getElementById('ajusteStatus-' + rota.id);
-  const motoristaEl = document.getElementById('ajusteMotorista-' + rota.id);
-  const veiculoEl = document.getElementById('ajusteVeiculo-' + rota.id);
-  const linhas = Array.from(document.querySelectorAll('#ajusteParadas-' + rota.id + ' .ajuste-parada'));
-
-  const removidos = [];
-  const comPosicao = [];
-  const mensagens = {};
-  linhas.forEach((linha, i) => {
-    const codigo = linha.dataset.codigo;
-    const mensagem = linha.querySelector('.ap-mensagem').value.trim();
-    if (mensagem) mensagens[codigo] = mensagem;
-    if (linha.querySelector('.ap-excluir').checked) { removidos.push(codigo); return; }
-    const pos = parseFloat(linha.querySelector('.ap-pos').value);
-    comPosicao.push({ codigo: codigo, pos: isNaN(pos) ? i : pos, i: i });
-  });
-  comPosicao.sort((a, b) => (a.pos - b.pos) || (a.i - b.i));
-  const ordem = comPosicao.map(x => x.codigo);
-
-  const doc = {
-    data: DATA_ISO,
-    rota_id: rota.id,
-    motorista_numero: motoristaEl.value || null,
-    veiculo: veiculoEl.value.trim() || null,
-    removidos: removidos,
-    ordem: ordem,
-    mensagens: mensagens,
-    atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
-  };
-  statusEl.textContent = 'Salvando...';
-  statusEl.style.color = '';
-  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rota.id).set(doc)
-    .then(() => { statusEl.textContent = 'Ajustes salvos.'; statusEl.style.color = '#1e7e34'; })
-    .catch(err => { statusEl.textContent = 'Erro ao salvar os ajustes.'; statusEl.style.color = '#c00000'; console.error(err); });
-}
-
-function limparAjuste(rota) {
-  const statusEl = document.getElementById('ajusteStatus-' + rota.id);
-  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rota.id).delete()
-    .then(() => {
-      statusEl.textContent = 'Ajustes removidos, rota voltou ao original do PathFind.';
-      statusEl.style.color = '#1e7e34';
-      document.getElementById('ajusteMotorista-' + rota.id).value = '';
-      document.getElementById('ajusteVeiculo-' + rota.id).value = '';
-      document.querySelectorAll('#ajusteParadas-' + rota.id + ' .ajuste-parada').forEach((linha, i) => {
-        linha.querySelector('.ap-excluir').checked = false;
-        linha.classList.remove('ap-excluida');
-        linha.querySelector('.ap-pos').value = i + 1;
-        linha.querySelector('.ap-mensagem').value = '';
-      });
-    })
-    .catch(err => { statusEl.textContent = 'Erro ao limpar os ajustes.'; statusEl.style.color = '#c00000'; console.error(err); });
-}
-
-function carregarAjustes() {
-  const listaEl = document.getElementById('listaAjustes');
-  listaEl.innerHTML = '';
-  if (!ROTAS_HOJE.length) {
-    listaEl.innerHTML = '<p style="text-align:center; font-size:0.8rem; color:#888;">Nenhuma rota gerada ainda hoje.</p>';
-    return;
-  }
-  ROTAS_HOJE.forEach(rota => {
-    const card = montarCardAjuste(rota);
-    listaEl.appendChild(card);
-    db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rota.id).get().then(doc => {
-      if (!doc.exists) return;
-      const d = doc.data();
-      if (d.motorista_numero) document.getElementById('ajusteMotorista-' + rota.id).value = d.motorista_numero;
-      if (d.veiculo) document.getElementById('ajusteVeiculo-' + rota.id).value = d.veiculo;
-      const removidos = new Set(d.removidos || []);
-      const posicao = new Map((d.ordem || []).map((c, i) => [c, i]));
-      const mensagens = d.mensagens || {};
-      document.querySelectorAll('#ajusteParadas-' + rota.id + ' .ajuste-parada').forEach(linha => {
-        const codigo = linha.dataset.codigo;
-        if (removidos.has(codigo)) {
-          linha.querySelector('.ap-excluir').checked = true;
-          linha.classList.add('ap-excluida');
-        }
-        if (posicao.has(codigo)) {
-          linha.querySelector('.ap-pos').value = posicao.get(codigo) + 1;
-        }
-        if (mensagens[codigo]) {
-          linha.querySelector('.ap-mensagem').value = mensagens[codigo];
-        }
-      });
-      card.open = true;
-      card.querySelector('summary').insertAdjacentHTML('beforeend', ' <span class="tag-ajustada">ajustada</span>');
-    }).catch(err => console.error('Falha ao carregar ajuste existente:', err));
-  });
-}
-
-
-function carregarMotoristas() {
-  const listaEl = document.getElementById('listaMotoristas');
-  listaEl.innerHTML = '';
-  for (let numero = NUMERO_MIN; numero <= NUMERO_MAX; numero++) {
-    listaEl.appendChild(montarLinha(numero));
-    db.collection('motoristas').doc(String(numero)).get().then(doc => {
-      if (doc.exists && doc.data().senha) {
-        const campo = document.getElementById('senha-' + numero);
-        if (campo) campo.value = doc.data().senha;
-      }
-    }).catch(err => console.error(err));
-  }
-}
-
-document.getElementById('btnGerarPadrao').addEventListener('click', () => {
-  if (!confirm('Isso substitui a senha de TODOS os motoristas (' + NUMERO_MIN + ' a ' + NUMERO_MAX + ') pelo padrao. Continuar?')) return;
-  let pendentes = 0;
-  for (let numero = NUMERO_MIN; numero <= NUMERO_MAX; numero++) {
-    pendentes++;
-    const senha = senhaPadrao(numero);
-    db.collection('motoristas').doc(String(numero)).set({ senha: senha })
-      .then(() => {
-        const campo = document.getElementById('senha-' + numero);
-        if (campo) campo.value = senha;
-        pendentes--;
-        if (pendentes === 0) mensagem('Senhas padrao geradas para todos os motoristas.', false);
-      })
-      .catch(err => { mensagem('Erro ao gerar as senhas padrao.', true); console.error(err); });
-  }
-});
-
-document.getElementById('btnSalvarAdmin').addEventListener('click', () => {
-  const valor = document.getElementById('novaSenhaAdmin').value.trim();
-  if (!valor) { mensagem('Digite a nova senha administrativa antes de salvar.', true); return; }
-  db.collection('motoristas').doc('admin').set({ senha: valor })
-    .then(() => { mensagem('Senha administrativa atualizada.', false); document.getElementById('novaSenhaAdmin').value = ''; })
-    .catch(err => { mensagem('Erro ao salvar a senha administrativa.', true); console.error(err); });
-});
-
+// Controle de acesso: pede a senha administrativa (guardada no Firestore,
+// colecao "motoristas", documento "admin"). Fica
+// desbloqueado so' durante esta aba/sessao (sessionStorage), nao para
+// sempre -- ao fechar o navegador, pede a senha de novo.
 if (sessionStorage.getItem('painel_desbloqueado') === 'sim') {
   document.body.classList.remove('bloqueado');
-  carregarMotoristas();
-  carregarAjustes();
 } else {
   document.getElementById('formSenhaAdmin').addEventListener('submit', ev => {
     ev.preventDefault();
@@ -446,8 +197,6 @@ if (sessionStorage.getItem('painel_desbloqueado') === 'sim') {
       if (doc.exists && doc.data().senha === senhaDigitada) {
         sessionStorage.setItem('painel_desbloqueado', 'sim');
         document.body.classList.remove('bloqueado');
-        carregarMotoristas();
-        carregarAjustes();
       } else {
         erroEl.textContent = 'Senha incorreta.';
       }
@@ -458,8 +207,157 @@ if (sessionStorage.getItem('painel_desbloqueado') === 'sim') {
   });
 }
 
+const RESPOSTA_STATUS = { entregue: 'Entregue', devolucao: 'Devolucao', fechado: 'Voltar depois/Fechado', '': 'Pendente' };
+
+// Mesma logica de _ROTA_TEMPLATE: aplica um ajuste manual (feito pelo
+// administrador) por cima das paradas de uma rota -- oculta removidas,
+// reordena e renumera. Duplicada aqui porque este gerador estatico nao tem
+// um modulo JS compartilhado entre paginas.
+function aplicarAjustePartadas(paradas, ajuste) {
+  let lista = paradas.slice();
+  if (ajuste && ajuste.removidos && ajuste.removidos.length) {
+    const removidos = new Set(ajuste.removidos);
+    lista = lista.filter(p => !removidos.has(p.codigo));
+  }
+  if (ajuste && ajuste.ordem && ajuste.ordem.length) {
+    const posicao = new Map(ajuste.ordem.map((c, i) => [c, i]));
+    lista.sort((a, b) => {
+      const pa = posicao.has(a.codigo) ? posicao.get(a.codigo) : Infinity;
+      const pb = posicao.has(b.codigo) ? posicao.get(b.codigo) : Infinity;
+      if (pa !== pb) return pa - pb;
+      return a.seq - b.seq;
+    });
+  }
+  const mensagens = (ajuste && ajuste.mensagens) || {};
+  return lista.map((p, i) => Object.assign({}, p, { seq: i + 1, mensagem: mensagens[p.codigo] || null }));
+}
+
+function rotuloComAjuste(rota, ajuste) {
+  if (!ajuste) return rota.rotulo;
+  const numero = ajuste.motorista_numero || rota.motorista_numero;
+  const placa = ajuste.veiculo || rota.veiculo;
+  return numero
+    ? (placa || 'Veiculo') + ' - Motorista ' + numero
+    : (placa || 'Veiculo') + ' - Sem motorista definido';
+}
+
+let ultimoStatus = {};
+let ultimosAjustes = {};
+
+function renderizar() {
+  painelEl.innerHTML = '';
+  ROTAS.forEach(rota => {
+    const ajuste = ultimosAjustes[rota.id] || null;
+    const paradasEfetivas = aplicarAjustePartadas(rota.paradas, ajuste);
+    const contagem = { entregue: 0, devolucao: 0, fechado: 0, pendente: 0 };
+    const linhas = paradasEfetivas.map(p => {
+      const status = ultimoStatus[p.codigo] || '';
+      contagem[status || 'pendente']++;
+      return '<div class="painel-linha status-' + (status || 'pendente') + '">' +
+        '<span class="p-seq">' + p.seq + '. ' + p.cliente + (p.mensagem ? ' <span class="tag-mensagem">aviso</span>' : '') + '</span>' +
+        '<span class="p-status">' + RESPOSTA_STATUS[status] + '</span>' +
+        '<button class="btn-aviso" data-rota="' + rota.id + '" data-codigo="' + p.codigo + '">' + (p.mensagem ? 'Editar aviso' : 'Lancar aviso') + '</button>' +
+        '</div>';
+    }).join('');
+    const card = document.createElement('div');
+    card.className = 'painel-rota';
+    card.dataset.rotaId = rota.id;
+    card.innerHTML =
+      '<h2>' + rotuloComAjuste(rota, ajuste) + (ajuste ? ' <span class="tag-ajustada">ajustada</span>' : '') + '</h2>' +
+      '<div class="painel-contagem">' +
+        '<span class="c-entregue">Entregues: ' + contagem.entregue + '</span>' +
+        '<span class="c-devolucao">Devolucoes: ' + contagem.devolucao + '</span>' +
+        '<span class="c-fechado">Fechados: ' + contagem.fechado + '</span>' +
+        '<span class="c-pendente">Pendentes: ' + contagem.pendente + '</span>' +
+      '</div>' +
+      '<div class="painel-linhas">' + linhas + '</div>';
+    painelEl.appendChild(card);
+  });
+  aplicarFiltroMotorista(motoristaFiltroAtual());
+}
+
+// Esconde/mostra os cards de rota que nao batem com o motorista escolhido
+// no filtro (chamada toda vez que a lista e' redesenhada, ja que
+// renderizar() reconstroi o HTML do zero a cada atualizacao em tempo real).
+function aplicarFiltroMotorista(id) {
+  document.querySelectorAll('.painel-rota').forEach(card => {
+    card.style.display = (!id || card.dataset.rotaId === id) ? '' : 'none';
+  });
+}
+
+// Monta a lista de grupos (rotulo + paradas com lat/lon) pro mapa
+// combinado, aplicando o mesmo ajuste manual (motorista/ordem/exclusao)
+// que os cards da lista ja mostram -- e respeitando o filtro de motorista.
+function gruposParaMapa(idFiltro) {
+  return ROTAS.filter(r => !idFiltro || r.id === idFiltro).map(r => {
+    const ajuste = ultimosAjustes[r.id] || null;
+    return { rotulo: rotuloComAjuste(r, ajuste), paradas: aplicarAjustePartadas(r.paradas, ajuste) };
+  });
+}
+
+// Permite ao supervisor lancar (ou editar) um aviso pra um pedido direto do
+// painel, sem precisar entrar no admin. Escuta cliques no botao "Lancar
+// aviso" via delegacao (o HTML das linhas e' recriado a cada renderizar()),
+// e grava so' o campo "mensagens" desse pedido, com merge:true -- assim nao
+// apaga um ajuste de motorista/veiculo/ordem que o admin/analista ja tenha
+// salvo nessa mesma rota.
+painelEl.addEventListener('click', ev => {
+  const btn = ev.target.closest('.btn-aviso');
+  if (!btn || !db) return;
+  const rotaId = btn.dataset.rota;
+  const codigo = btn.dataset.codigo;
+  const ajusteAtual = ultimosAjustes[rotaId];
+  const mensagemAtual = (ajusteAtual && ajusteAtual.mensagens && ajusteAtual.mensagens[codigo]) || '';
+  const novaMensagem = window.prompt('Aviso para o motorista sobre esse pedido:', mensagemAtual);
+  if (novaMensagem === null) return;
+  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rotaId).set({
+    data: DATA_ISO,
+    rota_id: rotaId,
+    mensagens: { [codigo]: novaMensagem.trim() }
+  }, { merge: true }).catch(err => {
+    alert('Erro ao salvar o aviso. Confira sua internet e tente de novo.');
+    console.error(err);
+  });
+});
+
+popularFiltroMotorista(ROTAS);
+
+// Ja renderiza a lista completa (todos "pendente") antes mesmo do Firestore
+// responder, pra pagina nao ficar em branco -- e depois atualiza sozinha,
+// em tempo real, toda vez que algum motorista marcar algo ou o
+// administrador salvar um ajuste manual (onSnapshot nas duas colecoes).
+renderizar();
+
+if (db) {
+  db.collection('status_entregas').where('data', '==', DATA_ISO)
+    .onSnapshot(snapshot => {
+      ultimoStatus = {};
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        ultimoStatus[d.codigo] = d.status;
+      });
+      renderizar();
+      const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      statusConexaoEl.textContent = 'Atualizado automaticamente às ' + agora;
+    }, err => {
+      statusConexaoEl.textContent = 'Erro ao conectar ao painel em tempo real.';
+      console.error(err);
+    });
+
+  db.collection('ajustes_rotas').where('data', '==', DATA_ISO)
+    .onSnapshot(snapshot => {
+      ultimosAjustes = {};
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        ultimosAjustes[d.rota_id] = d;
+      });
+      renderizar();
+      atualizarMapaGeral();
+    }, err => console.error('Falha ao acompanhar ajustes manuais:', err));
+}
+
 const NOMES_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-fetch('historico/manifest.json').then(r => r.json()).then(dias => {
+fetch('../manifest.json').then(r => r.json()).then(dias => {
   const selAno = document.getElementById('seletorAno');
   const selMes = document.getElementById('seletorMes');
   const selDia = document.getElementById('seletorData');
@@ -520,7 +418,7 @@ fetch('historico/manifest.json').then(r => r.json()).then(dias => {
     popularDias(selAno.value, selMes.value);
   });
   selDia.addEventListener('change', () => {
-    if (selDia.value) window.location.href = 'historico/' + selDia.value + '/admin.html';
+    if (selDia.value) window.location.href = '../' + selDia.value + '/painel.html';
   });
 }).catch(() => {});
 

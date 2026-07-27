@@ -142,7 +142,7 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
   <select id="seletorAno" class="compacta"></select>
   <select id="seletorMes" class="compacta"></select>
   <select id="seletorData"><option value="2026-07-23">23/07/2026 (hoje)</option></select>
-  <a href="admin.html">Ir para hoje</a>
+  <a href="../../admin.html">Ir para hoje</a>
 </div>
 <div class="filtro-motorista">
   <label for="seletorMotorista">Motorista:</label>
@@ -459,7 +459,7 @@ if (sessionStorage.getItem('painel_desbloqueado') === 'sim') {
 }
 
 const NOMES_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-fetch('historico/manifest.json').then(r => r.json()).then(dias => {
+fetch('../manifest.json').then(r => r.json()).then(dias => {
   const selAno = document.getElementById('seletorAno');
   const selMes = document.getElementById('seletorMes');
   const selDia = document.getElementById('seletorData');
@@ -520,7 +520,7 @@ fetch('historico/manifest.json').then(r => r.json()).then(dias => {
     popularDias(selAno.value, selMes.value);
   });
   selDia.addEventListener('change', () => {
-    if (selDia.value) window.location.href = 'historico/' + selDia.value + '/admin.html';
+    if (selDia.value) window.location.href = '../' + selDia.value + '/admin.html';
   });
 }).catch(() => {});
 
