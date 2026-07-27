@@ -58,11 +58,18 @@ def _salvar_estado(caminho: str, estado: dict) -> None:
         json.dump(estado, f, ensure_ascii=False, indent=2)
 
 
-def _publicar_no_git(repo_dir: str, mensagem: str) -> None:
+def _publicar_no_git(repo_dir: str, caminho_estado: str, mensagem: str) -> None:
     def rodar(*args: str) -> None:
         subprocess.run(["git", *args], cwd=repo_dir, check=True)
 
-    rodar("add", "docs", ARQUIVO_ESTADO)
+    # "docs" sempre existe (gerar_site ja' rodou antes desta chamada). Ja' o
+    # arquivo de estado so' existe a partir da primeira vez que alguem foi
+    # processado com sucesso -- por isso o "add" dele e' condicional (sem
+    # isso, "git add" falha com "pathspec did not match any files" na
+    # primeiríssima execucao do robo, antes desse arquivo nascer).
+    rodar("add", "docs")
+    if os.path.isfile(caminho_estado):
+        rodar("add", caminho_estado)
     resultado = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo_dir)
     if resultado.returncode == 0:
         log("Nada mudou, pulando commit.")
@@ -72,7 +79,12 @@ def _publicar_no_git(repo_dir: str, mensagem: str) -> None:
     log("Publicado no GitHub Pages.")
 
 
-def processar_item(item: dict, servico, repo_dir: str, origem_lat: float, origem_lon: float) -> None:
+def processar_item(
+    item: dict, servico, repo_dir: str, origem_lat: float, origem_lon: float,
+    estado: dict, caminho_estado: str, chave: str, marca_atual: str,
+) -> bool:
+    """Processa um arquivo e publica no git. Devolve True se processou de
+    verdade (usado pra decidir se atualiza o estado la' fora)."""
     nome_arquivo = item["name"]
     data_ref = _data_do_nome(nome_arquivo)
     log(f"Processando {nome_arquivo} (data de referencia: {data_ref.strftime('%d/%m/%Y')}) ...")
@@ -83,7 +95,7 @@ def processar_item(item: dict, servico, repo_dir: str, origem_lat: float, origem
     rotas = parse_conteudo(texto)
     if not rotas:
         log("  Nenhuma entrega reconhecida nesse arquivo, ignorando.")
-        return
+        return False
 
     total = sum(len(v) for v in rotas.values())
     log(f"  {len(rotas)} rota(s) / {total} entrega(s).")
@@ -99,7 +111,12 @@ def processar_item(item: dict, servico, repo_dir: str, origem_lat: float, origem
         log(f"  Data {data_ref.strftime('%d/%m/%Y')} e' mais antiga que a mais recente ja processada; "
             f"so' o historico foi atualizado.")
 
-    _publicar_no_git(repo_dir, f"Atualiza rotas de {data_ref.strftime('%d/%m/%Y')} a partir de {nome_arquivo}")
+    # Salva o estado ANTES de publicar, pra esse mesmo commit ja' incluir a
+    # marca desse arquivo como processado (ver nota em _publicar_no_git).
+    estado[chave] = marca_atual
+    _salvar_estado(caminho_estado, estado)
+    _publicar_no_git(repo_dir, caminho_estado, f"Atualiza rotas de {data_ref.strftime('%d/%m/%Y')} a partir de {nome_arquivo}")
+    return True
 
 
 def main() -> None:
@@ -139,13 +156,15 @@ def main() -> None:
         if estado.get(chave) == marca_atual:
             continue
         try:
-            processar_item(item, servico, repo_dir, origem_lat, origem_lon)
+            processado = processar_item(
+                item, servico, repo_dir, origem_lat, origem_lon,
+                estado, caminho_estado, chave, marca_atual,
+            )
         except Exception as exc:  # nao derruba o job inteiro por um arquivo ruim
             log(f"  Erro ao processar {item.get('name')}: {exc}")
             continue
-        estado[chave] = marca_atual
-        _salvar_estado(caminho_estado, estado)
-        algo_processado = True
+        if processado:
+            algo_processado = True
 
     if not algo_processado:
         log("Nenhum arquivo novo pra processar.")
