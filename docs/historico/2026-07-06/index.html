@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f4e78">
+<title>Rotas de 06/07/2026 - PathFind</title>
+<style>
+:root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: var(--texto); background: #f4f6f8; -webkit-tap-highlight-color: transparent; animation: entrada 0.15s ease-out; }
+@keyframes entrada { from { opacity: 0; } to { opacity: 1; } }
+header { background: var(--azul); color: #fff; padding: 12px 16px; }
+header h1 { margin: 0; font-size: 1.1rem; }
+header .marca { font-size: 0.75rem; opacity: 0.9; margin-top: 3px; }
+header .sub { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+.filtro-data { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-data label { font-size: 0.85rem; }
+.filtro-data select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 160px; }
+.filtro-data select.compacta { flex: 0 1 100px; min-width: 90px; }
+.filtro-data a { font-size: 0.8rem; color: var(--azul); text-decoration: none; white-space: nowrap; }
+.filtro-motorista { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-motorista label { font-size: 0.85rem; }
+.filtro-motorista select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 200px; }
+.mapa-geral-details { background: #fff; border-bottom: 1px solid var(--borda); }
+.mapa-geral-details summary { padding: 12px 16px; font-size: 0.85rem; font-weight: bold; color: var(--azul); cursor: pointer; }
+.mapa-geral { width: 100%; height: 60vh; min-height: 400px; }
+.legenda-motoristas { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; font-size: 0.72rem; }
+.legenda-item { display: flex; align-items: center; gap: 5px; }
+.legenda-cor { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+.aviso-linha-reta { background: #fff3cd; color: #664d03; font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid #ffe69c; }
+.aviso-ajuste { background: var(--azul-claro); color: var(--azul); font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid var(--borda); }
+.resumo { font-size: 0.72rem; background: var(--azul-claro); display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-radius: 8px; margin-top: 4px; }
+.resumo > div { display: flex; flex-direction: column; }
+.resumo span { color: #555; }
+.resumo b { color: var(--azul); font-size: 0.8rem; }
+#mapa { width: 100%; height: 68vh; min-height: 460px; }
+main { max-width: 720px; margin: 0 auto; padding: 0 4px; }
+ol.paradas { list-style: none; margin: 0; padding: 8px; }
+.parada { display: flex; gap: 10px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.parada .num { background: var(--azul); color: #fff; border-radius: 50%; width: 26px; height: 26px; min-width: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; align-self: flex-start; }
+.parada .info { flex: 1; }
+.parada .codigo { font-size: 0.68rem; color: #888; font-weight: bold; }
+.parada .cliente { font-weight: bold; font-size: 0.85rem; }
+.parada .endereco { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.parada .meta { font-size: 0.68rem; color: var(--azul); margin-top: 4px; }
+.parada .btn-maps { display: inline-block; margin-top: 8px; padding: 6px 12px; background: var(--azul); color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: bold; }
+.parada .btn-maps:visited { color: #fff; }
+.parada.status-entregue { border-left: 4px solid #1e7e34; }
+.parada.status-devolucao { border-left: 4px solid #c00000; }
+.parada.status-fechado { border-left: 4px solid #b8860b; }
+.parada.tem-mensagem { border: 2px solid #ff6d00; background: #fff8f0; }
+.mensagem-admin { background: #ff6d00; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: bold; margin-top: 6px; }
+.status-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.status-btn { flex: 1; min-width: 84px; padding: 6px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; background: #fff; cursor: pointer; text-align: center; }
+.status-btn.entregue { border: 1.5px solid #1e7e34; color: #1e7e34; }
+.status-btn.devolucao { border: 1.5px solid #c00000; color: #c00000; }
+.status-btn.fechado { border: 1.5px solid #b8860b; color: #b8860b; }
+.status-btn.entregue.ativo { background: #1e7e34; color: #fff; }
+.status-btn.devolucao.ativo { background: #c00000; color: #fff; }
+.status-btn.fechado.ativo { background: #b8860b; color: #fff; }
+footer { text-align: center; font-size: 0.72rem; color: #888; padding: 16px; }
+footer a { color: var(--azul); }
+ul.lista-rotas { list-style: none; margin: 0; padding: 12px; max-width: 480px; margin: 0 auto; }
+ul.lista-rotas li { margin-bottom: 10px; }
+ul.lista-rotas a { display: block; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; text-decoration: none; color: var(--texto); font-weight: bold; }
+ul.lista-rotas a small { display: block; font-weight: normal; color: #666; margin-top: 4px; }
+.link-painel { display: block; text-align: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); font-size: 0.85rem; }
+.painel-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 10px; padding: 12px; }
+.painel-rota h2 { margin: 0 0 8px 0; font-size: 0.95rem; }
+.painel-contagem { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; font-weight: bold; margin-bottom: 8px; }
+.painel-contagem .c-entregue { color: #1e7e34; }
+.painel-contagem .c-devolucao { color: #c00000; }
+.painel-contagem .c-fechado { color: #b8860b; }
+.painel-contagem .c-pendente { color: #888; }
+.painel-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 0.75rem; padding: 5px 0; border-top: 1px solid #f0f0f0; }
+.painel-linha .p-status { font-weight: bold; white-space: nowrap; }
+.painel-linha.status-entregue .p-status { color: #1e7e34; }
+.painel-linha.status-devolucao .p-status { color: #c00000; }
+.painel-linha.status-fechado .p-status { color: #b8860b; }
+.painel-linha.status-pendente .p-status { color: #bbb; }
+.btn-aviso { padding: 3px 8px; border-radius: 5px; border: 1.5px solid #ff6d00; color: #ff6d00; background: #fff; font-size: 0.66rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.painel-atualizado { text-align: center; font-size: 0.7rem; color: #888; padding: 8px; }
+.bloqueio { display: none; position: fixed; inset: 0; background: var(--azul); color: #fff; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+body.bloqueado .bloqueio { display: flex; }
+body.bloqueado > *:not(.bloqueio) { display: none !important; }
+.bloqueio-caixa { max-width: 320px; width: 100%; text-align: center; }
+.bloqueio-caixa h2 { margin: 0 0 4px 0; font-size: 1.1rem; }
+.bloqueio-caixa p { font-size: 0.8rem; opacity: 0.85; margin: 0 0 16px 0; }
+.bloqueio-caixa input { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
+.bloqueio-caixa button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fff; color: var(--azul); font-weight: bold; font-size: 1rem; cursor: pointer; }
+.bloqueio-erro { color: #ffd6d6; font-size: 0.78rem; margin-top: 10px; min-height: 1em; }
+.admin-linha { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 8px 10px; }
+.admin-linha span { min-width: 40px; font-weight: bold; font-size: 0.85rem; }
+.admin-linha input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.admin-linha button { padding: 8px 12px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.admin-topo { display: flex; gap: 8px; padding: 10px; flex-wrap: wrap; }
+.admin-topo button { padding: 10px 14px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+.admin-msg { text-align: center; font-size: 0.8rem; padding: 8px; min-height: 1.2em; }
+.secao-titulo { font-size: 1rem; margin: 18px 12px 6px 12px; color: var(--azul); }
+.ajuste-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 10px 10px; padding: 10px 12px; }
+.ajuste-rota summary { font-weight: bold; cursor: pointer; }
+.ajuste-rota summary small { font-weight: normal; color: #666; }
+.ajuste-campos { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.ajuste-campo { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.ajuste-campo select, .ajuste-campo input[type=text] { padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.ajuste-paradas { max-height: 320px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 6px; margin-bottom: 10px; }
+.ajuste-parada { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid #f0f0f0; }
+.ajuste-parada:last-child { border-bottom: none; }
+.ajuste-parada { flex-wrap: wrap; }
+.ajuste-parada .ap-nome { flex: 1; min-width: 140px; }
+.ajuste-parada .ap-pos { width: 52px; padding: 5px; border-radius: 5px; border: 1px solid var(--borda); text-align: center; }
+.ajuste-parada .ap-mensagem { flex: 1 1 100%; padding: 6px 8px; border-radius: 5px; border: 1px solid var(--borda); font-size: 0.78rem; margin-top: 4px; }
+.ajuste-parada.ap-excluida { opacity: 0.5; text-decoration: line-through; }
+.ajuste-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.ajuste-botoes button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.ajuste-botoes .btn-salvar { background: var(--azul); color: #fff; }
+.ajuste-botoes .btn-limpar { background: #fff; border: 1.5px solid #c00000 !important; color: #c00000; }
+.ajuste-status { font-size: 0.75rem; margin-top: 6px; min-height: 1.1em; }
+.tag-ajustada { display: inline-block; background: var(--azul); color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.tag-mensagem { display: inline-block; background: #ff6d00; color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Rotas de 06/07/2026</h1>
+  <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
+  <div class="sub">Atualizado em 27/07/2026 10:38</div>
+</header>
+<div class="filtro-data">
+  <label for="seletorAno">Ver rotas de:</label>
+  <select id="seletorAno" class="compacta"></select>
+  <select id="seletorMes" class="compacta"></select>
+  <select id="seletorData"><option value="2026-07-06">06/07/2026 (hoje)</option></select>
+  <a href="../../index.html">Ir para hoje</a>
+</div>
+<main>
+  <ul class="lista-rotas">
+    <li><a href="rotas/RMB-6G43-Motorista-730.html">RMB-6G43 - Motorista 730 <small>23 paradas &middot; 24.4 km</small></a></li>
+    <li><a href="rotas/TVA-6H36-Motorista-720.html">TVA-6H36 - Motorista 720 <small>19 paradas &middot; 27.9 km</small></a></li>
+    <li><a href="rotas/TVA-6H37-Motorista-726.html">TVA-6H37 - Motorista 726 <small>30 paradas &middot; 37.8 km</small></a></li>
+    <li><a href="rotas/OLL-3030-Sem-motorista-definido.html">OLL-3030 - Sem motorista definido <small>2 paradas &middot; 12.6 km</small></a></li>
+  </ul>
+</main>
+<footer>Gerado automaticamente a partir do relatorio do dia.</footer>
+
+<script>
+const NOMES_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+fetch('../manifest.json').then(r => r.json()).then(dias => {
+  const selAno = document.getElementById('seletorAno');
+  const selMes = document.getElementById('seletorMes');
+  const selDia = document.getElementById('seletorData');
+
+  dias.forEach(d => {
+    d._ano = d.data.slice(0, 4);
+    d._mes = d.data.slice(5, 7);
+  });
+
+  function popularAnos(anoSelecionado) {
+    const anos = [...new Set(dias.map(d => d._ano))].sort().reverse();
+    selAno.innerHTML = '';
+    anos.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.textContent = a;
+      selAno.appendChild(opt);
+    });
+    selAno.value = anos.includes(anoSelecionado) ? anoSelecionado : anos[0];
+  }
+
+  function popularMeses(ano, mesSelecionado) {
+    const mesesDoAno = [...new Set(dias.filter(d => d._ano === ano).map(d => d._mes))].sort().reverse();
+    selMes.innerHTML = '';
+    mesesDoAno.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = NOMES_MESES[parseInt(m, 10) - 1];
+      selMes.appendChild(opt);
+    });
+    selMes.value = mesesDoAno.includes(mesSelecionado) ? mesSelecionado : mesesDoAno[0];
+  }
+
+  function popularDias(ano, mes) {
+    const diasDoMes = dias.filter(d => d._ano === ano && d._mes === mes);
+    selDia.innerHTML = '';
+    diasDoMes.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.data;
+      opt.textContent = d.data_br + ' (' + d.rotas + ' rota(s))';
+      selDia.appendChild(opt);
+    });
+    if (diasDoMes.length) selDia.value = diasDoMes[0].data;
+  }
+
+  const anoAtual = '2026-07-06'.slice(0, 4);
+  const mesAtual = '2026-07-06'.slice(5, 7);
+  popularAnos(anoAtual);
+  popularMeses(selAno.value, mesAtual);
+  popularDias(selAno.value, selMes.value);
+  selDia.value = '2026-07-06';
+
+  selAno.addEventListener('change', () => {
+    popularMeses(selAno.value, selMes.value);
+    popularDias(selAno.value, selMes.value);
+  });
+  selMes.addEventListener('change', () => {
+    popularDias(selAno.value, selMes.value);
+  });
+  selDia.addEventListener('change', () => {
+    if (selDia.value) window.location.href = '../' + selDia.value + '/index.html';
+  });
+}).catch(() => {});
+
+</script>
+</body>
+</html>

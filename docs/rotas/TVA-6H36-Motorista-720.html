@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f4e78">
+<title>TVA-6H36 - Motorista 720 - Rota de entrega</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: var(--texto); background: #f4f6f8; -webkit-tap-highlight-color: transparent; animation: entrada 0.15s ease-out; }
+@keyframes entrada { from { opacity: 0; } to { opacity: 1; } }
+header { background: var(--azul); color: #fff; padding: 12px 16px; }
+header h1 { margin: 0; font-size: 1.1rem; }
+header .marca { font-size: 0.75rem; opacity: 0.9; margin-top: 3px; }
+header .sub { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+.filtro-data { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-data label { font-size: 0.85rem; }
+.filtro-data select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 160px; }
+.filtro-data select.compacta { flex: 0 1 100px; min-width: 90px; }
+.filtro-data a { font-size: 0.8rem; color: var(--azul); text-decoration: none; white-space: nowrap; }
+.filtro-motorista { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-motorista label { font-size: 0.85rem; }
+.filtro-motorista select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 200px; }
+.mapa-geral-details { background: #fff; border-bottom: 1px solid var(--borda); }
+.mapa-geral-details summary { padding: 12px 16px; font-size: 0.85rem; font-weight: bold; color: var(--azul); cursor: pointer; }
+.mapa-geral { width: 100%; height: 60vh; min-height: 400px; }
+.legenda-motoristas { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; font-size: 0.72rem; }
+.legenda-item { display: flex; align-items: center; gap: 5px; }
+.legenda-cor { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+.aviso-linha-reta { background: #fff3cd; color: #664d03; font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid #ffe69c; }
+.aviso-ajuste { background: var(--azul-claro); color: var(--azul); font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid var(--borda); }
+.resumo { font-size: 0.72rem; background: var(--azul-claro); display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-radius: 8px; margin-top: 4px; }
+.resumo > div { display: flex; flex-direction: column; }
+.resumo span { color: #555; }
+.resumo b { color: var(--azul); font-size: 0.8rem; }
+#mapa { width: 100%; height: 68vh; min-height: 460px; }
+main { max-width: 720px; margin: 0 auto; padding: 0 4px; }
+ol.paradas { list-style: none; margin: 0; padding: 8px; }
+.parada { display: flex; gap: 10px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.parada .num { background: var(--azul); color: #fff; border-radius: 50%; width: 26px; height: 26px; min-width: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; align-self: flex-start; }
+.parada .info { flex: 1; }
+.parada .codigo { font-size: 0.68rem; color: #888; font-weight: bold; }
+.parada .cliente { font-weight: bold; font-size: 0.85rem; }
+.parada .endereco { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.parada .meta { font-size: 0.68rem; color: var(--azul); margin-top: 4px; }
+.parada .btn-maps { display: inline-block; margin-top: 8px; padding: 6px 12px; background: var(--azul); color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: bold; }
+.parada .btn-maps:visited { color: #fff; }
+.parada.status-entregue { border-left: 4px solid #1e7e34; }
+.parada.status-devolucao { border-left: 4px solid #c00000; }
+.parada.status-fechado { border-left: 4px solid #b8860b; }
+.parada.tem-mensagem { border: 2px solid #ff6d00; background: #fff8f0; }
+.mensagem-admin { background: #ff6d00; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: bold; margin-top: 6px; }
+.status-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.status-btn { flex: 1; min-width: 84px; padding: 6px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; background: #fff; cursor: pointer; text-align: center; }
+.status-btn.entregue { border: 1.5px solid #1e7e34; color: #1e7e34; }
+.status-btn.devolucao { border: 1.5px solid #c00000; color: #c00000; }
+.status-btn.fechado { border: 1.5px solid #b8860b; color: #b8860b; }
+.status-btn.entregue.ativo { background: #1e7e34; color: #fff; }
+.status-btn.devolucao.ativo { background: #c00000; color: #fff; }
+.status-btn.fechado.ativo { background: #b8860b; color: #fff; }
+footer { text-align: center; font-size: 0.72rem; color: #888; padding: 16px; }
+footer a { color: var(--azul); }
+ul.lista-rotas { list-style: none; margin: 0; padding: 12px; max-width: 480px; margin: 0 auto; }
+ul.lista-rotas li { margin-bottom: 10px; }
+ul.lista-rotas a { display: block; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; text-decoration: none; color: var(--texto); font-weight: bold; }
+ul.lista-rotas a small { display: block; font-weight: normal; color: #666; margin-top: 4px; }
+.link-painel { display: block; text-align: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); font-size: 0.85rem; }
+.painel-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 10px; padding: 12px; }
+.painel-rota h2 { margin: 0 0 8px 0; font-size: 0.95rem; }
+.painel-contagem { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; font-weight: bold; margin-bottom: 8px; }
+.painel-contagem .c-entregue { color: #1e7e34; }
+.painel-contagem .c-devolucao { color: #c00000; }
+.painel-contagem .c-fechado { color: #b8860b; }
+.painel-contagem .c-pendente { color: #888; }
+.painel-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 0.75rem; padding: 5px 0; border-top: 1px solid #f0f0f0; }
+.painel-linha .p-status { font-weight: bold; white-space: nowrap; }
+.painel-linha.status-entregue .p-status { color: #1e7e34; }
+.painel-linha.status-devolucao .p-status { color: #c00000; }
+.painel-linha.status-fechado .p-status { color: #b8860b; }
+.painel-linha.status-pendente .p-status { color: #bbb; }
+.btn-aviso { padding: 3px 8px; border-radius: 5px; border: 1.5px solid #ff6d00; color: #ff6d00; background: #fff; font-size: 0.66rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.painel-atualizado { text-align: center; font-size: 0.7rem; color: #888; padding: 8px; }
+.bloqueio { display: none; position: fixed; inset: 0; background: var(--azul); color: #fff; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+body.bloqueado .bloqueio { display: flex; }
+body.bloqueado > *:not(.bloqueio) { display: none !important; }
+.bloqueio-caixa { max-width: 320px; width: 100%; text-align: center; }
+.bloqueio-caixa h2 { margin: 0 0 4px 0; font-size: 1.1rem; }
+.bloqueio-caixa p { font-size: 0.8rem; opacity: 0.85; margin: 0 0 16px 0; }
+.bloqueio-caixa input { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
+.bloqueio-caixa button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fff; color: var(--azul); font-weight: bold; font-size: 1rem; cursor: pointer; }
+.bloqueio-erro { color: #ffd6d6; font-size: 0.78rem; margin-top: 10px; min-height: 1em; }
+.admin-linha { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 8px 10px; }
+.admin-linha span { min-width: 40px; font-weight: bold; font-size: 0.85rem; }
+.admin-linha input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.admin-linha button { padding: 8px 12px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.admin-topo { display: flex; gap: 8px; padding: 10px; flex-wrap: wrap; }
+.admin-topo button { padding: 10px 14px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+.admin-msg { text-align: center; font-size: 0.8rem; padding: 8px; min-height: 1.2em; }
+.secao-titulo { font-size: 1rem; margin: 18px 12px 6px 12px; color: var(--azul); }
+.ajuste-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 10px 10px; padding: 10px 12px; }
+.ajuste-rota summary { font-weight: bold; cursor: pointer; }
+.ajuste-rota summary small { font-weight: normal; color: #666; }
+.ajuste-campos { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.ajuste-campo { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.ajuste-campo select, .ajuste-campo input[type=text] { padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.ajuste-paradas { max-height: 320px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 6px; margin-bottom: 10px; }
+.ajuste-parada { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid #f0f0f0; }
+.ajuste-parada:last-child { border-bottom: none; }
+.ajuste-parada { flex-wrap: wrap; }
+.ajuste-parada .ap-nome { flex: 1; min-width: 140px; }
+.ajuste-parada .ap-pos { width: 52px; padding: 5px; border-radius: 5px; border: 1px solid var(--borda); text-align: center; }
+.ajuste-parada .ap-mensagem { flex: 1 1 100%; padding: 6px 8px; border-radius: 5px; border: 1px solid var(--borda); font-size: 0.78rem; margin-top: 4px; }
+.ajuste-parada.ap-excluida { opacity: 0.5; text-decoration: line-through; }
+.ajuste-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.ajuste-botoes button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.ajuste-botoes .btn-salvar { background: var(--azul); color: #fff; }
+.ajuste-botoes .btn-limpar { background: #fff; border: 1.5px solid #c00000 !important; color: #c00000; }
+.ajuste-status { font-size: 0.75rem; margin-top: 6px; min-height: 1.1em; }
+.tag-ajustada { display: inline-block; background: var(--azul); color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.tag-mensagem { display: inline-block; background: #ff6d00; color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="bloqueio"><div class="bloqueio-caixa"><h2>Rota protegida</h2><p>Digite a senha do motorista pra ver essa rota.</p><form id="formSenha"><input type="password" id="campoSenha" placeholder="Senha" autocomplete="current-password" required><button type="submit">Entrar</button></form><div class="bloqueio-erro" id="bloqueioErro"></div></div></div>
+<header>
+  <h1>TVA-6H36 - Motorista 720</h1>
+  <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
+  <div class="sub">Atualizado em 27/07/2026 10:38</div>
+</header>
+<div id="avisoAjuste"></div><div id="mapa"></div>
+<main>
+  <ol class="paradas" id="listaParadas"></ol>
+  <div class="resumo">
+    <div><span>Original (ida/volta)</span><b>29.57 km</b></div>
+    <div><span>Otimizada (ida/volta)</span><b>27.85 km</b></div>
+    <div><span>Economia</span><b>1.72 km (5.8%)</b></div>
+    <div><span>Saida &rarr; 1a parada</span><b>6.82 km</b></div>
+    <div><span>Ultima parada &rarr; volta</span><b>11.12 km</b></div>
+  </div>
+</main>
+<footer><a href="../index.html">Ver todas as rotas desta data</a></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const PARADAS = [{"seq": 1, "codigo": "01000028", "pedido": "0042", "cliente": "COML SAO LUIZ", "endereco": "RUA ANHANGUERA, 80 -00199SETOR URBANOARAGUAINATO - SETOR URBANO - ARAGUAINA/TO - CEP 77813520", "lat": -7.203574, "lon": -48.20347, "dist_anterior_km": 6.8183, "dist_proxima_km": 0.2825}, {"seq": 2, "codigo": "01002560", "pedido": "0029", "cliente": "BRASA QUENTE      01", "endereco": "AV ANHANGUERA, 173SETOR CARAJASARAGUAINATO - SETOR CARAJAS - ARAGUAINA/TO - CEP 77809200", "lat": -7.205715, "lon": -48.202065, "dist_anterior_km": 0.2825, "dist_proxima_km": 0.1866}, {"seq": 3, "codigo": "01002975", "pedido": "0041", "cliente": "BAR CONVENIENCIA PH", "endereco": "RUA CARAMURU, 212BAIRRO ELDORADOARAGUAINATO - BAIRRO ELDORADO - ARAGUAINA/TO - CEP 77800000", "lat": -7.206267, "lon": -48.200674, "dist_anterior_km": 0.1866, "dist_proxima_km": 0.16269999999999998}, {"seq": 4, "codigo": "01000030", "pedido": "0076", "cliente": "COML JOSIMARIA", "endereco": "RUA PREF JOAO DE SO S/N -00201BAIRRO ELDORADOARAGUAINATO - BAIRRO ELDORADO - ARAGUAINA/TO - CEP 77807160", "lat": -7.205961, "lon": -48.199561, "dist_anterior_km": 0.16269999999999998, "dist_proxima_km": 0.22590000000000002}, {"seq": 5, "codigo": "01002022", "pedido": "0079", "cliente": "BAR DO REGIS", "endereco": "RUA MARIA DE SOUZA, 120SETOR CARAJASARAGUAINATO - SETOR CARAJAS - ARAGUAINA/TO - CEP 77809010", "lat": -7.205184, "lon": -48.197874, "dist_anterior_km": 0.22590000000000002, "dist_proxima_km": 0.4697}, {"seq": 6, "codigo": "01000561", "pedido": "0011", "cliente": "BAR ZEQUINHA", "endereco": "AV PREFEITO JOAO DE S/N -00348BAIRRO ELDORADOARAGUAINATO - BAIRRO ELDORADO - ARAGUAINA/TO - CEP 77807180", "lat": -7.203842, "lon": -48.200576, "dist_anterior_km": 0.4697, "dist_proxima_km": 0.09809999999999999}, {"seq": 7, "codigo": "01000352", "pedido": "0075", "cliente": "BAR DO LILI", "endereco": "AV PREF JOAO DE SOUS S/N -00295BAIRRO ELDORADOARAGUAINATO - BAIRRO ELDORADO - ARAGUAINA/TO - CEP 77813000", "lat": -7.20302, "lon": -48.200915, "dist_anterior_km": 0.09809999999999999, "dist_proxima_km": 0.8459}, {"seq": 8, "codigo": "01001294", "pedido": "0017", "cliente": "SUPER MIX BRAS", "endereco": "AV PREFEITO JOAO DE SOUSA LIMA, 1821BAIRRO ELDORADOARAGUAINATO - BAIRRO ELDORADO - ARAGUAINA/TO - CEP 77813410", "lat": -7.210178, "lon": -48.19836, "dist_anterior_km": 0.8459, "dist_proxima_km": 0.2554}, {"seq": 9, "codigo": "01001562", "pedido": "0087", "cliente": "ADEGA SO + UMA", "endereco": "RUA DOS MOTORISTAS, 8 -QD3 LT08JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809270", "lat": -7.212418, "lon": -48.198266, "dist_anterior_km": 0.2554, "dist_proxima_km": 0.4035}, {"seq": 10, "codigo": "01001649", "pedido": "0081", "cliente": "ESPETISCO", "endereco": "AV DOS ADVOGADOS, 641 -QD641 LT10JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809260", "lat": -7.210396, "lon": -48.200642, "dist_anterior_km": 0.4035, "dist_proxima_km": 0.202}, {"seq": 11, "codigo": "01002526", "pedido": "0080", "cliente": "POINT VIP", "endereco": "AV DOS ADVOGADOS S/NJARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809260", "lat": -7.210017, "lon": -48.202431, "dist_anterior_km": 0.202, "dist_proxima_km": 0.1768}, {"seq": 12, "codigo": "01001363", "pedido": "0083", "cliente": "MANGUEIRAS BAR    01", "endereco": "RUA DOS AGRIMENSORES QD217, 487JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809250", "lat": -7.209195, "lon": -48.202216, "dist_anterior_km": 0.1768, "dist_proxima_km": 0.079}, {"seq": 13, "codigo": "01001633", "pedido": "0077", "cliente": "ESPETO DO SENA", "endereco": "RU1 SANTA LUZIA URBANO, 222SETOR URBANOARAGUAINATO - SETOR URBANO - ARAGUAINA/TO - CEP 77800000", "lat": -7.208825, "lon": -48.202849, "dist_anterior_km": 0.079, "dist_proxima_km": 0.017}, {"seq": 14, "codigo": "01000633", "pedido": "0082", "cliente": "ROMILTONS GRILL", "endereco": "RUA DOS AGRIMENSORES, 446 -00363JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809250", "lat": -7.208816, "lon": -48.203008, "dist_anterior_km": 0.017, "dist_proxima_km": 0.37}, {"seq": 15, "codigo": "01002561", "pedido": "0084", "cliente": "BAR LANCHE MURA CI01", "endereco": "AV CARAMURU, 630SETOR CARAJASARAGUAINATO - SETOR CARAJAS - ARAGUAINA/TO - CEP 77809050", "lat": -7.208185, "lon": -48.200523, "dist_anterior_km": 0.37, "dist_proxima_km": 0.7972}, {"seq": 16, "codigo": "01000298", "pedido": "0021", "cliente": "LANC DA MARIA PRETA", "endereco": "RUA ADVOGADOS, 101 -00786JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77808180", "lat": -7.209227, "lon": -48.205702, "dist_anterior_km": 0.7972, "dist_proxima_km": 0.3649}, {"seq": 17, "codigo": "01000639", "pedido": "0085", "cliente": "JE BAR", "endereco": "RUA DOS MECANICOS, 5 -00367JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809300", "lat": -7.212295, "lon": -48.205915, "dist_anterior_km": 0.3649, "dist_proxima_km": 0.5077}, {"seq": 18, "codigo": "01001561", "pedido": "0078", "cliente": "COMERCIAL MD", "endereco": "RUA SOLIMOES, 454JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809460", "lat": -7.214885, "lon": -48.207835, "dist_anterior_km": 0.5077, "dist_proxima_km": 4.4754}, {"seq": 19, "codigo": "01002857", "pedido": "0086", "cliente": "PATROCINIO DIST CONV", "endereco": "RUA 0015 QD18 LT04 S/NVILA PATROCINIOARAGUAINATO - VILA PATROCINIO - ARAGUAINA/TO - CEP 77826618", "lat": -7.202703, "lon": -48.182148, "dist_anterior_km": 4.4754, "dist_proxima_km": null}];
+const ORIGEM = {"lat": -7.22722092594843, "lon": -48.24978544427654};
+const TRACADO_IDA = [[-7.22693, -48.250414], [-7.214238, -48.244759], [-7.207152, -48.241101], [-7.207887, -48.239551], [-7.208322, -48.236399], [-7.208208, -48.234595], [-7.203712, -48.223746], [-7.201798, -48.21526], [-7.202998, -48.206099], [-7.202913, -48.203759], [-7.203546, -48.203418], [-7.205766, -48.202154], [-7.206747, -48.201601], [-7.206795, -48.200548], [-7.206295, -48.200746], [-7.205975, -48.199588], [-7.207743, -48.198817], [-7.208018, -48.197374], [-7.207172, -48.197524], [-7.206615, -48.197263], [-7.205194, -48.197896], [-7.20591, -48.199622], [-7.203863, -48.200621], [-7.202158, -48.201453], [-7.203065, -48.201008], [-7.207335, -48.198939], [-7.210185, -48.198402], [-7.21246, -48.198144], [-7.213338, -48.198443], [-7.213174, -48.198921], [-7.212158, -48.198481], [-7.210632, -48.199385], [-7.210416, -48.200645], [-7.210293, -48.201375], [-7.210988, -48.201506], [-7.210751, -48.202774], [-7.210096, -48.202446], [-7.210178, -48.202002], [-7.209168, -48.201803], [-7.209052, -48.20217], [-7.208836, -48.202852], [-7.208789, -48.202999], [-7.20855, -48.203756], [-7.207334, -48.203555], [-7.207461, -48.200308], [-7.208152, -48.200048], [-7.208153, -48.200523], [-7.208058, -48.200954], [-7.210293, -48.201375], [-7.209484, -48.205752], [-7.209328, -48.206519], [-7.210816, -48.206325], [-7.211171, -48.204239], [-7.212552, -48.204481], [-7.212305, -48.205917], [-7.215262, -48.206397], [-7.214883, -48.207835], [-7.214851, -48.208281], [-7.209587, -48.207471], [-7.209388, -48.206258], [-7.202994, -48.205092], [-7.202546, -48.201508], [-7.198492, -48.194041], [-7.198707, -48.192954], [-7.198349, -48.19089], [-7.199131, -48.188669], [-7.203159, -48.183562], [-7.203935, -48.181862], [-7.203584, -48.181683], [-7.20304, -48.18239], [-7.202717, -48.182129]];
+const TRACADO_VOLTA = [[-7.202717, -48.182129], [-7.20304, -48.18239], [-7.198269, -48.188637], [-7.197574, -48.191546], [-7.19804, -48.193477], [-7.202135, -48.201101], [-7.202732, -48.203209], [-7.201754, -48.215578], [-7.204045, -48.225145], [-7.208155, -48.23485], [-7.20822, -48.236523], [-7.207592, -48.239863], [-7.207057, -48.241057], [-7.206253, -48.240665], [-7.205925, -48.241098], [-7.228225, -48.251482], [-7.232451, -48.252836], [-7.232268, -48.252508], [-7.22693, -48.250414]];
+const DATA_ISO = '2026-07-06';
+const ROTULO_ROTA = "TVA-6H36 - Motorista 720";
+const NUMERO_MOTORISTA = "720";
+const ROTA_ID = "RT001002";
+const VEICULO_ORIGINAL = "TVA-6H36";
+
+// Status de entrega marcado pelo motorista (Entregue / Devolucao / Voltar
+// depois-Fechado). Fica salvo em 2 lugares: localStorage (instantaneo,
+// funciona ate' sem internet no momento do clique) e no Firestore (nuvem,
+// pra sincronizar entre o celular do motorista e o painel do supervisor).
+// Escopado por dia (chave inclui DATA_ISO) para que a marcacao de hoje nao
+// apareca, por engano, numa rota de um dia futuro com o mesmo cliente.
+const CORES_STATUS = { '': '#1f4e78', entregue: '#1e7e34', devolucao: '#c00000', fechado: '#b8860b' };
+
+let paradasEfetivas = PARADAS;
+
+// Aplica um ajuste manual (feito pelo administrador) por cima da lista de
+// paradas original: oculta as removidas, reordena pela posicao escolhida
+// (codigo nao listado mantem a ordem relativa original, vai pro fim) e
+// renumera a sequencia de 1..N -- a numeracao mostrada ao motorista e' sempre
+// a "efetiva", nunca a original do PathFind quando ha ajuste.
+function aplicarAjustePartadas(paradas, ajuste) {
+  let lista = paradas.slice();
+  if (ajuste && ajuste.removidos && ajuste.removidos.length) {
+    const removidos = new Set(ajuste.removidos);
+    lista = lista.filter(p => !removidos.has(p.codigo));
+  }
+  if (ajuste && ajuste.ordem && ajuste.ordem.length) {
+    const posicao = new Map(ajuste.ordem.map((c, i) => [c, i]));
+    lista.sort((a, b) => {
+      const pa = posicao.has(a.codigo) ? posicao.get(a.codigo) : Infinity;
+      const pb = posicao.has(b.codigo) ? posicao.get(b.codigo) : Infinity;
+      if (pa !== pb) return pa - pb;
+      return a.seq - b.seq;
+    });
+  }
+  const mensagens = (ajuste && ajuste.mensagens) || {};
+  return lista.map((p, i) => Object.assign({}, p, { seq: i + 1, mensagem: mensagens[p.codigo] || null }));
+}
+
+let db = null;
+try {
+  firebase.initializeApp({"apiKey": "AIzaSyDZpcc1GgdbknHdkuI4dOx1myDR6PsLPic", "authDomain": "rotacertaog.firebaseapp.com", "projectId": "rotacertaog", "storageBucket": "rotacertaog.firebasestorage.app", "messagingSenderId": "1048075742585", "appId": "1:1048075742585:web:424f99f9a29fa0f23593a8"});
+  db = firebase.firestore();
+} catch (e) {
+  console.error('Firebase nao inicializou (marcacao vai funcionar so neste aparelho):', e);
+}
+
+function chaveStatus(codigo) {
+  return 'status_' + DATA_ISO + '_' + codigo;
+}
+function lerStatus(codigo) {
+  return localStorage.getItem(chaveStatus(codigo)) || '';
+}
+function salvarStatusRemoto(p, status) {
+  if (!db) return;
+  const ref = db.collection('status_entregas').doc(DATA_ISO + '_' + p.codigo);
+  if (status) {
+    ref.set({
+      data: DATA_ISO,
+      rotulo: ROTULO_ROTA,
+      codigo: p.codigo,
+      cliente: p.cliente,
+      seq: p.seq,
+      status: status,
+      atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.error('Falha ao sincronizar status:', err));
+  } else {
+    ref.delete().catch(err => console.error('Falha ao limpar status remoto:', err));
+  }
+}
+function iconeNumerado(numero, cor) {
+  cor = cor || '#1f4e78';
+  return L.divIcon({
+    className: 'icone-parada',
+    html: '<div style="background:' + cor + ';color:#fff;border-radius:50%;width:26px;height:26px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;' +
+          'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">' + numero + '</div>',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
+  });
+}
+
+function aplicarStatus(li, status, marker, numero, temMensagem) {
+  li.classList.remove('status-entregue', 'status-devolucao', 'status-fechado');
+  li.querySelectorAll('.status-btn').forEach(b => b.classList.remove('ativo'));
+  if (status) {
+    li.classList.add('status-' + status);
+    const btn = li.querySelector('.status-btn.' + status);
+    if (btn) btn.classList.add('ativo');
+  }
+  if (marker) {
+    const cor = status ? CORES_STATUS[status] : (temMensagem ? '#ff6d00' : CORES_STATUS['']);
+    marker.setIcon(iconeNumerado(numero, cor));
+  }
+}
+
+function iniciarPagina() {
+const listaEl = document.getElementById('listaParadas');
+const mapa = L.map('mapa', { preferCanvas: true });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  updateWhenZooming: false,
+  keepBuffer: 3,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(mapa);
+
+const iconeOrigem = L.divIcon({
+  className: 'icone-origem',
+  html: '<div style="background:#c00000;color:#fff;border-radius:50%;width:26px;height:26px;' +
+        'display:flex;align-items:center;justify-content:center;font-size:14px;' +
+        'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">&#128666;</div>',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13]
+});
+
+const pontos = [[ORIGEM.lat, ORIGEM.lon]];
+L.marker([ORIGEM.lat, ORIGEM.lon], { icon: iconeOrigem })
+  .bindPopup('<b>Saida do caminhao</b>')
+  .addTo(mapa);
+
+const referencias = {};  // codigo -> { li, marker }, usado pra aplicar o status vindo do Firestore
+
+paradasEfetivas.forEach(p => {
+  const li = document.createElement('li');
+  li.className = 'parada' + (p.mensagem ? ' tem-mensagem' : '');
+  const origemTxt = (p.seq === 1) ? 'saida' : 'parada anterior';
+  const chegadaTxt = 'de ' + origemTxt + ': ' + p.dist_anterior_km.toFixed(2) + ' km';
+  const proximaTxt = (p.dist_proxima_km === null) ? 'ultima parada'
+    : ('proxima: ' + p.dist_proxima_km.toFixed(2) + ' km');
+  const mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lon;
+  const mensagemHtml = p.mensagem ? '<div class="mensagem-admin">Aviso: ' + p.mensagem + '</div>' : '';
+  li.innerHTML =
+    '<div class="num">' + p.seq + '</div>' +
+    '<div class="info">' +
+      '<div class="codigo">Pedido ' + parseInt(p.pedido, 10) + ' &middot; ' + p.codigo + '</div>' +
+      '<div class="cliente">' + p.cliente + '</div>' +
+      '<div class="endereco">' + p.endereco + '</div>' +
+      mensagemHtml +
+      '<div class="meta">' + chegadaTxt + ' &middot; ' + proximaTxt + '</div>' +
+      '<div class="status-botoes">' +
+        '<div class="status-btn entregue" data-status="entregue">Entregue</div>' +
+        '<div class="status-btn devolucao" data-status="devolucao">Devolucao</div>' +
+        '<div class="status-btn fechado" data-status="fechado">Voltar depois/Fechado</div>' +
+      '</div>' +
+      '<a class="btn-maps" href="' + mapsUrl + '" target="_blank" rel="noopener">Abrir no Google Maps</a>' +
+    '</div>';
+  listaEl.appendChild(li);
+  pontos.push([p.lat, p.lon]);
+  const statusInicial = lerStatus(p.codigo);
+  const marker = L.marker([p.lat, p.lon], { icon: iconeNumerado(p.seq, CORES_STATUS[statusInicial]) })
+    .bindPopup('<b>' + p.seq + '. ' + p.codigo + ' - ' + p.cliente + '</b><br>' + p.endereco)
+    .addTo(mapa);
+  aplicarStatus(li, statusInicial, marker, p.seq, !!p.mensagem);
+  referencias[p.codigo] = { li, marker, mensagem: !!p.mensagem };
+  li.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const status = btn.dataset.status;
+      const novo = btn.classList.contains('ativo') ? '' : status;
+      if (novo) {
+        localStorage.setItem(chaveStatus(p.codigo), novo);
+      } else {
+        localStorage.removeItem(chaveStatus(p.codigo));
+      }
+      aplicarStatus(li, novo, marker, p.seq, !!p.mensagem);
+      salvarStatusRemoto(p, novo);
+    });
+  });
+});
+
+// Ao abrir a pagina, busca no Firestore o status mais recente de cada
+// parada (pode ter sido marcado de outro aparelho) e sobrescreve o que
+// veio do localStorage, que e' so' um cache instantaneo local.
+if (db) {
+  db.collection('status_entregas').where('data', '==', DATA_ISO).get().then(snapshot => {
+    snapshot.forEach(doc => {
+      const dados = doc.data();
+      const ref = referencias[dados.codigo];
+      if (ref && dados.status && dados.status !== lerStatus(dados.codigo)) {
+        localStorage.setItem(chaveStatus(dados.codigo), dados.status);
+        const seqNum = parseInt(ref.li.querySelector('.num').textContent, 10);
+        aplicarStatus(ref.li, dados.status, ref.marker, seqNum, ref.mensagem);
+      }
+    });
+  }).catch(err => console.error('Falha ao buscar status remoto:', err));
+}
+
+if (pontos.length > 1) {
+  // TRACADO_IDA/TRACADO_VOLTA vem do OSRM (segue as ruas de verdade). Se o
+  // servico falhou na hora de gerar a pagina, caimos para uma linha reta
+  // entre os pontos, so pra sempre ter algo desenhado no mapa.
+  const linhaIda = (TRACADO_IDA && TRACADO_IDA.length > 1) ? TRACADO_IDA : pontos;
+  const linhaVolta = (TRACADO_VOLTA && TRACADO_VOLTA.length > 1)
+    ? TRACADO_VOLTA
+    : [pontos[pontos.length - 1], [ORIGEM.lat, ORIGEM.lon]];
+  L.polyline(linhaIda, { color: '#1f4e78', weight: 4, opacity: 0.75 }).addTo(mapa);
+  L.polyline(linhaVolta, { color: '#c00000', weight: 4, opacity: 0.65, dashArray: '6 8' }).addTo(mapa);
+}
+if (pontos.length) {
+  mapa.fitBounds(pontos, { padding: [30, 30] });
+}
+}  // fim de iniciarPagina()
+
+// --- controle de acesso por senha (por motorista) ---------------------
+// Protecao simples: impede abertura casual do link. Nao e' seguranca forte
+// (o codigo roda todo no navegador, alguem tecnico poderia contornar), mas
+// evita que quem receba o link por engano veja dados do cliente. A senha
+// fica guardada no Firestore (colecao "motoristas"),
+// nunca no codigo desta pagina.
+// Antes de decidir a senha/rotulo, busca se ha algum ajuste manual salvo
+// pelo administrador pra essa rota+dia (troca de motorista/veiculo, ordem
+// ou paradas removidas). Se houver, ele manda: inclusive a senha exigida
+// passa a ser a do motorista definido no ajuste, nao a original do PathFind.
+function iniciarComAjuste(ajuste) {
+  paradasEfetivas = aplicarAjustePartadas(PARADAS, ajuste);
+  const numeroEfetivo = (ajuste && ajuste.motorista_numero) || NUMERO_MOTORISTA;
+  const placaEfetiva = (ajuste && ajuste.veiculo) || VEICULO_ORIGINAL;
+  if (ajuste) {
+    const rotuloEfetivo = numeroEfetivo
+      ? (placaEfetiva || 'Veiculo') + ' - Motorista ' + numeroEfetivo
+      : (placaEfetiva || 'Veiculo') + ' - Sem motorista definido';
+    document.title = rotuloEfetivo + ' - Rota de entrega';
+    const h1 = document.querySelector('header h1');
+    if (h1) h1.textContent = rotuloEfetivo;
+    const avisoEl = document.getElementById('avisoAjuste');
+    if (avisoEl) {
+      avisoEl.className = 'aviso-ajuste';
+      avisoEl.textContent = 'Esta rota foi ajustada manualmente pelo administrador.';
+    }
+  }
+
+  if (!numeroEfetivo) {
+    iniciarPagina();  // sem motorista definido (original nem ajustado): nao da pra proteger, abre direto
+    return;
+  }
+  const chaveDesbloqueio = 'desbloqueado_motorista_' + numeroEfetivo;
+  if (localStorage.getItem(chaveDesbloqueio) === 'sim') {
+    iniciarPagina();
+    return;
+  }
+  const form = document.getElementById('formSenha');
+  if (!form) { iniciarPagina(); return; }
+  document.body.classList.add('bloqueado');
+  const erroEl = document.getElementById('bloqueioErro');
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if (!db) {
+      erroEl.textContent = 'Sem conexao com o servidor de senhas. Confira sua internet e tente de novo.';
+      return;
+    }
+    const senhaDigitada = document.getElementById('campoSenha').value;
+    erroEl.textContent = 'Verificando...';
+    db.collection('motoristas').doc(numeroEfetivo).get().then(doc => {
+      if (doc.exists && doc.data().senha === senhaDigitada) {
+        localStorage.setItem(chaveDesbloqueio, 'sim');
+        document.body.classList.remove('bloqueado');
+        iniciarPagina();
+      } else {
+        erroEl.textContent = 'Senha incorreta.';
+      }
+    }).catch(err => {
+      erroEl.textContent = 'Erro ao verificar a senha. Confira sua internet.';
+      console.error(err);
+    });
+  });
+}
+
+if (db && ROTA_ID) {
+  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + ROTA_ID).get()
+    .then(doc => iniciarComAjuste(doc.exists ? doc.data() : null))
+    .catch(err => { console.error('Falha ao buscar ajuste manual:', err); iniciarComAjuste(null); });
+} else {
+  iniciarComAjuste(null);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f4e78">
+<title>Painel do supervisor - 06/07/2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: var(--texto); background: #f4f6f8; -webkit-tap-highlight-color: transparent; animation: entrada 0.15s ease-out; }
+@keyframes entrada { from { opacity: 0; } to { opacity: 1; } }
+header { background: var(--azul); color: #fff; padding: 12px 16px; }
+header h1 { margin: 0; font-size: 1.1rem; }
+header .marca { font-size: 0.75rem; opacity: 0.9; margin-top: 3px; }
+header .sub { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+.filtro-data { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-data label { font-size: 0.85rem; }
+.filtro-data select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 160px; }
+.filtro-data select.compacta { flex: 0 1 100px; min-width: 90px; }
+.filtro-data a { font-size: 0.8rem; color: var(--azul); text-decoration: none; white-space: nowrap; }
+.filtro-motorista { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-motorista label { font-size: 0.85rem; }
+.filtro-motorista select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 200px; }
+.mapa-geral-details { background: #fff; border-bottom: 1px solid var(--borda); }
+.mapa-geral-details summary { padding: 12px 16px; font-size: 0.85rem; font-weight: bold; color: var(--azul); cursor: pointer; }
+.mapa-geral { width: 100%; height: 60vh; min-height: 400px; }
+.legenda-motoristas { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; font-size: 0.72rem; }
+.legenda-item { display: flex; align-items: center; gap: 5px; }
+.legenda-cor { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+.aviso-linha-reta { background: #fff3cd; color: #664d03; font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid #ffe69c; }
+.aviso-ajuste { background: var(--azul-claro); color: var(--azul); font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid var(--borda); }
+.resumo { font-size: 0.72rem; background: var(--azul-claro); display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-radius: 8px; margin-top: 4px; }
+.resumo > div { display: flex; flex-direction: column; }
+.resumo span { color: #555; }
+.resumo b { color: var(--azul); font-size: 0.8rem; }
+#mapa { width: 100%; height: 68vh; min-height: 460px; }
+main { max-width: 720px; margin: 0 auto; padding: 0 4px; }
+ol.paradas { list-style: none; margin: 0; padding: 8px; }
+.parada { display: flex; gap: 10px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.parada .num { background: var(--azul); color: #fff; border-radius: 50%; width: 26px; height: 26px; min-width: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; align-self: flex-start; }
+.parada .info { flex: 1; }
+.parada .codigo { font-size: 0.68rem; color: #888; font-weight: bold; }
+.parada .cliente { font-weight: bold; font-size: 0.85rem; }
+.parada .endereco { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.parada .meta { font-size: 0.68rem; color: var(--azul); margin-top: 4px; }
+.parada .btn-maps { display: inline-block; margin-top: 8px; padding: 6px 12px; background: var(--azul); color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: bold; }
+.parada .btn-maps:visited { color: #fff; }
+.parada.status-entregue { border-left: 4px solid #1e7e34; }
+.parada.status-devolucao { border-left: 4px solid #c00000; }
+.parada.status-fechado { border-left: 4px solid #b8860b; }
+.parada.tem-mensagem { border: 2px solid #ff6d00; background: #fff8f0; }
+.mensagem-admin { background: #ff6d00; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: bold; margin-top: 6px; }
+.status-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.status-btn { flex: 1; min-width: 84px; padding: 6px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; background: #fff; cursor: pointer; text-align: center; }
+.status-btn.entregue { border: 1.5px solid #1e7e34; color: #1e7e34; }
+.status-btn.devolucao { border: 1.5px solid #c00000; color: #c00000; }
+.status-btn.fechado { border: 1.5px solid #b8860b; color: #b8860b; }
+.status-btn.entregue.ativo { background: #1e7e34; color: #fff; }
+.status-btn.devolucao.ativo { background: #c00000; color: #fff; }
+.status-btn.fechado.ativo { background: #b8860b; color: #fff; }
+footer { text-align: center; font-size: 0.72rem; color: #888; padding: 16px; }
+footer a { color: var(--azul); }
+ul.lista-rotas { list-style: none; margin: 0; padding: 12px; max-width: 480px; margin: 0 auto; }
+ul.lista-rotas li { margin-bottom: 10px; }
+ul.lista-rotas a { display: block; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; text-decoration: none; color: var(--texto); font-weight: bold; }
+ul.lista-rotas a small { display: block; font-weight: normal; color: #666; margin-top: 4px; }
+.link-painel { display: block; text-align: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); font-size: 0.85rem; }
+.painel-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 10px; padding: 12px; }
+.painel-rota h2 { margin: 0 0 8px 0; font-size: 0.95rem; }
+.painel-contagem { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; font-weight: bold; margin-bottom: 8px; }
+.painel-contagem .c-entregue { color: #1e7e34; }
+.painel-contagem .c-devolucao { color: #c00000; }
+.painel-contagem .c-fechado { color: #b8860b; }
+.painel-contagem .c-pendente { color: #888; }
+.painel-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 0.75rem; padding: 5px 0; border-top: 1px solid #f0f0f0; }
+.painel-linha .p-status { font-weight: bold; white-space: nowrap; }
+.painel-linha.status-entregue .p-status { color: #1e7e34; }
+.painel-linha.status-devolucao .p-status { color: #c00000; }
+.painel-linha.status-fechado .p-status { color: #b8860b; }
+.painel-linha.status-pendente .p-status { color: #bbb; }
+.btn-aviso { padding: 3px 8px; border-radius: 5px; border: 1.5px solid #ff6d00; color: #ff6d00; background: #fff; font-size: 0.66rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.painel-atualizado { text-align: center; font-size: 0.7rem; color: #888; padding: 8px; }
+.bloqueio { display: none; position: fixed; inset: 0; background: var(--azul); color: #fff; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+body.bloqueado .bloqueio { display: flex; }
+body.bloqueado > *:not(.bloqueio) { display: none !important; }
+.bloqueio-caixa { max-width: 320px; width: 100%; text-align: center; }
+.bloqueio-caixa h2 { margin: 0 0 4px 0; font-size: 1.1rem; }
+.bloqueio-caixa p { font-size: 0.8rem; opacity: 0.85; margin: 0 0 16px 0; }
+.bloqueio-caixa input { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
+.bloqueio-caixa button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fff; color: var(--azul); font-weight: bold; font-size: 1rem; cursor: pointer; }
+.bloqueio-erro { color: #ffd6d6; font-size: 0.78rem; margin-top: 10px; min-height: 1em; }
+.admin-linha { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 8px 10px; }
+.admin-linha span { min-width: 40px; font-weight: bold; font-size: 0.85rem; }
+.admin-linha input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.admin-linha button { padding: 8px 12px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.admin-topo { display: flex; gap: 8px; padding: 10px; flex-wrap: wrap; }
+.admin-topo button { padding: 10px 14px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+.admin-msg { text-align: center; font-size: 0.8rem; padding: 8px; min-height: 1.2em; }
+.secao-titulo { font-size: 1rem; margin: 18px 12px 6px 12px; color: var(--azul); }
+.ajuste-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 10px 10px; padding: 10px 12px; }
+.ajuste-rota summary { font-weight: bold; cursor: pointer; }
+.ajuste-rota summary small { font-weight: normal; color: #666; }
+.ajuste-campos { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.ajuste-campo { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.ajuste-campo select, .ajuste-campo input[type=text] { padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.ajuste-paradas { max-height: 320px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 6px; margin-bottom: 10px; }
+.ajuste-parada { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid #f0f0f0; }
+.ajuste-parada:last-child { border-bottom: none; }
+.ajuste-parada { flex-wrap: wrap; }
+.ajuste-parada .ap-nome { flex: 1; min-width: 140px; }
+.ajuste-parada .ap-pos { width: 52px; padding: 5px; border-radius: 5px; border: 1px solid var(--borda); text-align: center; }
+.ajuste-parada .ap-mensagem { flex: 1 1 100%; padding: 6px 8px; border-radius: 5px; border: 1px solid var(--borda); font-size: 0.78rem; margin-top: 4px; }
+.ajuste-parada.ap-excluida { opacity: 0.5; text-decoration: line-through; }
+.ajuste-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.ajuste-botoes button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.ajuste-botoes .btn-salvar { background: var(--azul); color: #fff; }
+.ajuste-botoes .btn-limpar { background: #fff; border: 1.5px solid #c00000 !important; color: #c00000; }
+.ajuste-status { font-size: 0.75rem; margin-top: 6px; min-height: 1.1em; }
+.tag-ajustada { display: inline-block; background: var(--azul); color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.tag-mensagem { display: inline-block; background: #ff6d00; color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body class="bloqueado">
+<div class="bloqueio"><div class="bloqueio-caixa">
+  <h2>Painel do supervisor</h2>
+  <p>Digite a senha administrativa pra continuar.</p>
+  <form id="formSenhaAdmin">
+    <input type="password" id="campoSenhaAdmin" placeholder="Senha administrativa" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+  </form>
+  <div class="bloqueio-erro" id="bloqueioErroAdmin"></div>
+</div></div>
+<header>
+  <h1>Painel do supervisor</h1>
+  <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
+  <div class="sub">Rotas de 06/07/2026</div>
+</header>
+<div class="filtro-data">
+  <label for="seletorAno">Ver rotas de:</label>
+  <select id="seletorAno" class="compacta"></select>
+  <select id="seletorMes" class="compacta"></select>
+  <select id="seletorData"><option value="2026-07-06">06/07/2026 (hoje)</option></select>
+  <a href="../../painel.html">Ir para hoje</a>
+</div>
+<div class="filtro-motorista">
+  <label for="seletorMotorista">Motorista:</label>
+  <select id="seletorMotorista"><option value="">Todos</option></select>
+</div>
+<details class="mapa-geral-details" id="detalhesMapaGeral">
+  <summary>Ver mapa de todas as entregas de hoje</summary>
+  <div id="mapaGeral" class="mapa-geral"></div>
+  <div id="legendaMotoristas" class="legenda-motoristas"></div>
+</details>
+<main id="painel"></main>
+<div class="painel-atualizado" id="statusConexao">Conectando ao painel em tempo real...</div>
+<footer><a href="index.html">Ver lista de rotas</a></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const ROTAS = [{"id": "RT001001", "rotulo": "RMB-6G43 - Motorista 730", "veiculo": "RMB-6G43", "motorista_numero": "730", "paradas": [{"seq": 1, "codigo": "01002565", "cliente": "MERC DA JOANA", "lat": -7.223041, "lon": -48.245311}, {"seq": 2, "codigo": "01002749", "cliente": "BAR DO JADSON", "lat": -7.222431, "lon": -48.24479}, {"seq": 3, "codigo": "01001999", "cliente": "BAR SABOR DE MEL", "lat": -7.223747, "lon": -48.241779}, {"seq": 4, "codigo": "01000203", "cliente": "ADEGA MERC BOM SABOR", "lat": -7.221741, "lon": -48.240344}, {"seq": 5, "codigo": "01002332", "cliente": "PONTO DO SABOR", "lat": -7.22446, "lon": -48.242076}, {"seq": 6, "codigo": "01000647", "cliente": "REAL BAR 04", "lat": -7.224031, "lon": -48.244361}, {"seq": 7, "codigo": "01000674", "cliente": "BRITOS BAR 01", "lat": -7.224219, "lon": -48.237765}, {"seq": 8, "codigo": "01001272", "cliente": "ADEGAO MIX        01", "lat": -7.218481, "lon": -48.237841}, {"seq": 9, "codigo": "01002779", "cliente": "ENTOCAS BAR", "lat": -7.218613, "lon": -48.238858}, {"seq": 10, "codigo": "01000387", "cliente": "BAR DA LOURA 03", "lat": -7.218841, "lon": -48.24018}, {"seq": 11, "codigo": "01000061", "cliente": "SUPERMERCADO SAO LUI", "lat": -7.219346, "lon": -48.234636}, {"seq": 12, "codigo": "01002964", "cliente": "BAIXINHO BEBIDAS  01", "lat": -7.22106, "lon": -48.232401}, {"seq": 13, "codigo": "01001253", "cliente": "MARCADINHO PATRIA", "lat": -7.221348, "lon": -48.233857}, {"seq": 14, "codigo": "01002563", "cliente": "PESQUE PAG PRIMAVERA", "lat": -7.225023, "lon": -48.250028}, {"seq": 15, "codigo": "01000339", "cliente": "PARK AQUATICO 3J", "lat": -7.221585, "lon": -48.277048}, {"seq": 16, "codigo": "01000530", "cliente": "CONVENIENCIA 2 IRMAO", "lat": -7.206767, "lon": -48.241786}, {"seq": 17, "codigo": "01000316", "cliente": "NOQUEIRA BAR", "lat": -7.208011, "lon": -48.243047}, {"seq": 18, "codigo": "01001423", "cliente": "SUPER MIX JK", "lat": -7.204192, "lon": -48.242382}, {"seq": 19, "codigo": "01000024", "cliente": "MERCEA TRES IRMAOS", "lat": -7.204069, "lon": -48.242433}, {"seq": 20, "codigo": "01000553", "cliente": "BAR DO BAIXOTE", "lat": -7.202979, "lon": -48.241587}, {"seq": 21, "codigo": "01002567", "cliente": "PEIXARIA CRISTAL", "lat": -7.201644, "lon": -48.240871}, {"seq": 22, "codigo": "01003002", "cliente": "C/ DE CARNE ALVORADA", "lat": -7.202642, "lon": -48.239892}, {"seq": 23, "codigo": "01001102", "cliente": "BAR E RESTAURANTE JM", "lat": -7.203673, "lon": -48.240264}]}, {"id": "RT001002", "rotulo": "TVA-6H36 - Motorista 720", "veiculo": "TVA-6H36", "motorista_numero": "720", "paradas": [{"seq": 1, "codigo": "01000028", "cliente": "COML SAO LUIZ", "lat": -7.203574, "lon": -48.20347}, {"seq": 2, "codigo": "01002560", "cliente": "BRASA QUENTE      01", "lat": -7.205715, "lon": -48.202065}, {"seq": 3, "codigo": "01002975", "cliente": "BAR CONVENIENCIA PH", "lat": -7.206267, "lon": -48.200674}, {"seq": 4, "codigo": "01000030", "cliente": "COML JOSIMARIA", "lat": -7.205961, "lon": -48.199561}, {"seq": 5, "codigo": "01002022", "cliente": "BAR DO REGIS", "lat": -7.205184, "lon": -48.197874}, {"seq": 6, "codigo": "01000561", "cliente": "BAR ZEQUINHA", "lat": -7.203842, "lon": -48.200576}, {"seq": 7, "codigo": "01000352", "cliente": "BAR DO LILI", "lat": -7.20302, "lon": -48.200915}, {"seq": 8, "codigo": "01001294", "cliente": "SUPER MIX BRAS", "lat": -7.210178, "lon": -48.19836}, {"seq": 9, "codigo": "01001562", "cliente": "ADEGA SO + UMA", "lat": -7.212418, "lon": -48.198266}, {"seq": 10, "codigo": "01001649", "cliente": "ESPETISCO", "lat": -7.210396, "lon": -48.200642}, {"seq": 11, "codigo": "01002526", "cliente": "POINT VIP", "lat": -7.210017, "lon": -48.202431}, {"seq": 12, "codigo": "01001363", "cliente": "MANGUEIRAS BAR    01", "lat": -7.209195, "lon": -48.202216}, {"seq": 13, "codigo": "01001633", "cliente": "ESPETO DO SENA", "lat": -7.208825, "lon": -48.202849}, {"seq": 14, "codigo": "01000633", "cliente": "ROMILTONS GRILL", "lat": -7.208816, "lon": -48.203008}, {"seq": 15, "codigo": "01002561", "cliente": "BAR LANCHE MURA CI01", "lat": -7.208185, "lon": -48.200523}, {"seq": 16, "codigo": "01000298", "cliente": "LANC DA MARIA PRETA", "lat": -7.209227, "lon": -48.205702}, {"seq": 17, "codigo": "01000639", "cliente": "JE BAR", "lat": -7.212295, "lon": -48.205915}, {"seq": 18, "codigo": "01001561", "cliente": "COMERCIAL MD", "lat": -7.214885, "lon": -48.207835}, {"seq": 19, "codigo": "01002857", "cliente": "PATROCINIO DIST CONV", "lat": -7.202703, "lon": -48.182148}]}, {"id": "RT001003", "rotulo": "TVA-6H37 - Motorista 726", "veiculo": "TVA-6H37", "motorista_numero": "726", "paradas": [{"seq": 1, "codigo": "01000975", "cliente": "SUPER MIX BRAZ", "lat": -7.231069, "lon": -48.253071}, {"seq": 2, "codigo": "01002771", "cliente": "VIDAL BARBEARIA", "lat": -7.231416, "lon": -48.254606}, {"seq": 3, "codigo": "01000332", "cliente": "BAR DO JERONIMO", "lat": -7.233085, "lon": -48.255918}, {"seq": 4, "codigo": "01002784", "cliente": "COMERCIAL SS", "lat": -7.234491, "lon": -48.257511}, {"seq": 5, "codigo": "01000454", "cliente": "BAR DA MARIA 03", "lat": -7.231828, "lon": -48.258116}, {"seq": 6, "codigo": "01002770", "cliente": "MERCEARIA DO VEIN", "lat": -7.23188, "lon": -48.259436}, {"seq": 7, "codigo": "01000991", "cliente": "SUPER ROCHA", "lat": -7.233505, "lon": -48.252445}, {"seq": 8, "codigo": "01000041", "cliente": "COMERCIAL DA MATA", "lat": -7.234423, "lon": -48.251246}, {"seq": 9, "codigo": "01000614", "cliente": "BOTEQUIM SOUSA", "lat": -7.234856, "lon": -48.250976}, {"seq": 10, "codigo": "01002916", "cliente": "BAR DA VALDIRENE", "lat": -7.234873, "lon": -48.251031}, {"seq": 11, "codigo": "01002069", "cliente": "SUPERMERCADO ROCHA02", "lat": -7.232166, "lon": -48.234251}, {"seq": 12, "codigo": "01002395", "cliente": "MERCA DO BERNARDO", "lat": -7.231813, "lon": -48.233161}, {"seq": 13, "codigo": "01001524", "cliente": "CONVEN COSTA RICA", "lat": -7.231945, "lon": -48.231966}, {"seq": 14, "codigo": "01002828", "cliente": "LANCHONETE DA DIVINA", "lat": -7.23292, "lon": -48.232995}, {"seq": 15, "codigo": "01002400", "cliente": "MINI BOX HS", "lat": -7.233856, "lon": -48.226235}, {"seq": 16, "codigo": "01000188", "cliente": "ACOUGUE DO ZE LOPES", "lat": -7.235758, "lon": -48.225355}, {"seq": 17, "codigo": "01002773", "cliente": "SUPER PAI FILHO 02", "lat": -7.229985, "lon": -48.224448}, {"seq": 18, "codigo": "01001985", "cliente": "CANTINHO DO ESPETO01", "lat": -7.226439, "lon": -48.224569}, {"seq": 19, "codigo": "01002845", "cliente": "ADEGA DO ARLINDO  01", "lat": -7.22579, "lon": -48.224953}, {"seq": 20, "codigo": "01002944", "cliente": "ACQUAS DISTRIBUIDORA", "lat": -7.225826, "lon": -48.221277}, {"seq": 21, "codigo": "01003003", "cliente": "ESPETO BAMBU RESTAUR", "lat": -7.22489, "lon": -48.220516}, {"seq": 22, "codigo": "01002548", "cliente": "ADEGA PARQ DO LAGO", "lat": -7.229458, "lon": -48.221402}, {"seq": 23, "codigo": "01002734", "cliente": "SALGADOS AGUIAR", "lat": -7.216646, "lon": -48.219426}, {"seq": 24, "codigo": "01000638", "cliente": "QUIOSQUE DO LAGO", "lat": -7.22023, "lon": -48.218813}, {"seq": 25, "codigo": "01002485", "cliente": "ADEGA AQUI TA BOM", "lat": -7.228832, "lon": -48.212175}, {"seq": 26, "codigo": "01002932", "cliente": "TOCA DO COELHO", "lat": -7.227445, "lon": -48.210375}, {"seq": 27, "codigo": "01002653", "cliente": "CRISTO REI", "lat": -7.28183, "lon": -48.275027}, {"seq": 28, "codigo": "01000078", "cliente": "COMERC BOM PRECO", "lat": -7.282838, "lon": -48.275952}, {"seq": 29, "codigo": "01000513", "cliente": "BAR DO GASPAR", "lat": -7.282838, "lon": -48.276356}, {"seq": 30, "codigo": "01000397", "cliente": "BAR DO KIBANO", "lat": -7.281808, "lon": -48.276118}]}, {"id": "RT001004", "rotulo": "OLL-3030 - Sem motorista definido", "veiculo": "OLL-3030", "motorista_numero": null, "paradas": [{"seq": 1, "codigo": "01002648", "cliente": "DONA MARIA BEACH", "lat": -7.215596, "lon": -48.218502}, {"seq": 2, "codigo": "01002895", "cliente": "CASERATTO", "lat": -7.215755, "lon": -48.219056}]}];
+const DATA_ISO = '2026-07-06';
+const ORIGEM_GERAL = {"lat": -7.22722092594843, "lon": -48.24978544427654};
+const painelEl = document.getElementById('painel');
+const statusConexaoEl = document.getElementById('statusConexao');
+
+let db = null;
+try {
+  firebase.initializeApp({"apiKey": "AIzaSyDZpcc1GgdbknHdkuI4dOx1myDR6PsLPic", "authDomain": "rotacertaog.firebaseapp.com", "projectId": "rotacertaog", "storageBucket": "rotacertaog.firebasestorage.app", "messagingSenderId": "1048075742585", "appId": "1:1048075742585:web:424f99f9a29fa0f23593a8"});
+  db = firebase.firestore();
+} catch (e) {
+  statusConexaoEl.textContent = 'Nao foi possivel conectar ao painel em tempo real.';
+  console.error(e);
+}
+
+// Controle de acesso: pede a senha administrativa (guardada no Firestore,
+// colecao "motoristas", documento "admin"). Fica
+// desbloqueado so' durante esta aba/sessao (sessionStorage), nao para
+// sempre -- ao fechar o navegador, pede a senha de novo.
+if (sessionStorage.getItem('painel_desbloqueado') === 'sim') {
+  document.body.classList.remove('bloqueado');
+} else {
+  document.getElementById('formSenhaAdmin').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const erroEl = document.getElementById('bloqueioErroAdmin');
+    if (!db) {
+      erroEl.textContent = 'Sem conexao. Confira sua internet e tente de novo.';
+      return;
+    }
+    const senhaDigitada = document.getElementById('campoSenhaAdmin').value;
+    erroEl.textContent = 'Verificando...';
+    db.collection('motoristas').doc('admin').get().then(doc => {
+      if (doc.exists && doc.data().senha === senhaDigitada) {
+        sessionStorage.setItem('painel_desbloqueado', 'sim');
+        document.body.classList.remove('bloqueado');
+      } else {
+        erroEl.textContent = 'Senha incorreta.';
+      }
+    }).catch(err => {
+      erroEl.textContent = 'Erro ao verificar a senha.';
+      console.error(err);
+    });
+  });
+}
+
+const RESPOSTA_STATUS = { entregue: 'Entregue', devolucao: 'Devolucao', fechado: 'Voltar depois/Fechado', '': 'Pendente' };
+
+// Mesma logica de _ROTA_TEMPLATE: aplica um ajuste manual (feito pelo
+// administrador) por cima das paradas de uma rota -- oculta removidas,
+// reordena e renumera. Duplicada aqui porque este gerador estatico nao tem
+// um modulo JS compartilhado entre paginas.
+function aplicarAjustePartadas(paradas, ajuste) {
+  let lista = paradas.slice();
+  if (ajuste && ajuste.removidos && ajuste.removidos.length) {
+    const removidos = new Set(ajuste.removidos);
+    lista = lista.filter(p => !removidos.has(p.codigo));
+  }
+  if (ajuste && ajuste.ordem && ajuste.ordem.length) {
+    const posicao = new Map(ajuste.ordem.map((c, i) => [c, i]));
+    lista.sort((a, b) => {
+      const pa = posicao.has(a.codigo) ? posicao.get(a.codigo) : Infinity;
+      const pb = posicao.has(b.codigo) ? posicao.get(b.codigo) : Infinity;
+      if (pa !== pb) return pa - pb;
+      return a.seq - b.seq;
+    });
+  }
+  const mensagens = (ajuste && ajuste.mensagens) || {};
+  return lista.map((p, i) => Object.assign({}, p, { seq: i + 1, mensagem: mensagens[p.codigo] || null }));
+}
+
+function rotuloComAjuste(rota, ajuste) {
+  if (!ajuste) return rota.rotulo;
+  const numero = ajuste.motorista_numero || rota.motorista_numero;
+  const placa = ajuste.veiculo || rota.veiculo;
+  return numero
+    ? (placa || 'Veiculo') + ' - Motorista ' + numero
+    : (placa || 'Veiculo') + ' - Sem motorista definido';
+}
+
+let ultimoStatus = {};
+let ultimosAjustes = {};
+
+function renderizar() {
+  painelEl.innerHTML = '';
+  ROTAS.forEach(rota => {
+    const ajuste = ultimosAjustes[rota.id] || null;
+    const paradasEfetivas = aplicarAjustePartadas(rota.paradas, ajuste);
+    const contagem = { entregue: 0, devolucao: 0, fechado: 0, pendente: 0 };
+    const linhas = paradasEfetivas.map(p => {
+      const status = ultimoStatus[p.codigo] || '';
+      contagem[status || 'pendente']++;
+      return '<div class="painel-linha status-' + (status || 'pendente') + '">' +
+        '<span class="p-seq">' + p.seq + '. ' + p.cliente + (p.mensagem ? ' <span class="tag-mensagem">aviso</span>' : '') + '</span>' +
+        '<span class="p-status">' + RESPOSTA_STATUS[status] + '</span>' +
+        '<button class="btn-aviso" data-rota="' + rota.id + '" data-codigo="' + p.codigo + '">' + (p.mensagem ? 'Editar aviso' : 'Lancar aviso') + '</button>' +
+        '</div>';
+    }).join('');
+    const card = document.createElement('div');
+    card.className = 'painel-rota';
+    card.dataset.rotaId = rota.id;
+    card.innerHTML =
+      '<h2>' + rotuloComAjuste(rota, ajuste) + (ajuste ? ' <span class="tag-ajustada">ajustada</span>' : '') + '</h2>' +
+      '<div class="painel-contagem">' +
+        '<span class="c-entregue">Entregues: ' + contagem.entregue + '</span>' +
+        '<span class="c-devolucao">Devolucoes: ' + contagem.devolucao + '</span>' +
+        '<span class="c-fechado">Fechados: ' + contagem.fechado + '</span>' +
+        '<span class="c-pendente">Pendentes: ' + contagem.pendente + '</span>' +
+      '</div>' +
+      '<div class="painel-linhas">' + linhas + '</div>';
+    painelEl.appendChild(card);
+  });
+  aplicarFiltroMotorista(motoristaFiltroAtual());
+}
+
+// Esconde/mostra os cards de rota que nao batem com o motorista escolhido
+// no filtro (chamada toda vez que a lista e' redesenhada, ja que
+// renderizar() reconstroi o HTML do zero a cada atualizacao em tempo real).
+function aplicarFiltroMotorista(id) {
+  document.querySelectorAll('.painel-rota').forEach(card => {
+    card.style.display = (!id || card.dataset.rotaId === id) ? '' : 'none';
+  });
+}
+
+// Monta a lista de grupos (rotulo + paradas com lat/lon) pro mapa
+// combinado, aplicando o mesmo ajuste manual (motorista/ordem/exclusao)
+// que os cards da lista ja mostram -- e respeitando o filtro de motorista.
+function gruposParaMapa(idFiltro) {
+  return ROTAS.filter(r => !idFiltro || r.id === idFiltro).map(r => {
+    const ajuste = ultimosAjustes[r.id] || null;
+    return { rotulo: rotuloComAjuste(r, ajuste), paradas: aplicarAjustePartadas(r.paradas, ajuste) };
+  });
+}
+
+// Permite ao supervisor lancar (ou editar) um aviso pra um pedido direto do
+// painel, sem precisar entrar no admin. Escuta cliques no botao "Lancar
+// aviso" via delegacao (o HTML das linhas e' recriado a cada renderizar()),
+// e grava so' o campo "mensagens" desse pedido, com merge:true -- assim nao
+// apaga um ajuste de motorista/veiculo/ordem que o admin/analista ja tenha
+// salvo nessa mesma rota.
+painelEl.addEventListener('click', ev => {
+  const btn = ev.target.closest('.btn-aviso');
+  if (!btn || !db) return;
+  const rotaId = btn.dataset.rota;
+  const codigo = btn.dataset.codigo;
+  const ajusteAtual = ultimosAjustes[rotaId];
+  const mensagemAtual = (ajusteAtual && ajusteAtual.mensagens && ajusteAtual.mensagens[codigo]) || '';
+  const novaMensagem = window.prompt('Aviso para o motorista sobre esse pedido:', mensagemAtual);
+  if (novaMensagem === null) return;
+  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rotaId).set({
+    data: DATA_ISO,
+    rota_id: rotaId,
+    mensagens: { [codigo]: novaMensagem.trim() }
+  }, { merge: true }).catch(err => {
+    alert('Erro ao salvar o aviso. Confira sua internet e tente de novo.');
+    console.error(err);
+  });
+});
+
+popularFiltroMotorista(ROTAS);
+
+// Ja renderiza a lista completa (todos "pendente") antes mesmo do Firestore
+// responder, pra pagina nao ficar em branco -- e depois atualiza sozinha,
+// em tempo real, toda vez que algum motorista marcar algo ou o
+// administrador salvar um ajuste manual (onSnapshot nas duas colecoes).
+renderizar();
+
+if (db) {
+  db.collection('status_entregas').where('data', '==', DATA_ISO)
+    .onSnapshot(snapshot => {
+      ultimoStatus = {};
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        ultimoStatus[d.codigo] = d.status;
+      });
+      renderizar();
+      const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      statusConexaoEl.textContent = 'Atualizado automaticamente às ' + agora;
+    }, err => {
+      statusConexaoEl.textContent = 'Erro ao conectar ao painel em tempo real.';
+      console.error(err);
+    });
+
+  db.collection('ajustes_rotas').where('data', '==', DATA_ISO)
+    .onSnapshot(snapshot => {
+      ultimosAjustes = {};
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        ultimosAjustes[d.rota_id] = d;
+      });
+      renderizar();
+      atualizarMapaGeral();
+    }, err => console.error('Falha ao acompanhar ajustes manuais:', err));
+}
+
+const NOMES_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+fetch('../manifest.json').then(r => r.json()).then(dias => {
+  const selAno = document.getElementById('seletorAno');
+  const selMes = document.getElementById('seletorMes');
+  const selDia = document.getElementById('seletorData');
+
+  dias.forEach(d => {
+    d._ano = d.data.slice(0, 4);
+    d._mes = d.data.slice(5, 7);
+  });
+
+  function popularAnos(anoSelecionado) {
+    const anos = [...new Set(dias.map(d => d._ano))].sort().reverse();
+    selAno.innerHTML = '';
+    anos.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.textContent = a;
+      selAno.appendChild(opt);
+    });
+    selAno.value = anos.includes(anoSelecionado) ? anoSelecionado : anos[0];
+  }
+
+  function popularMeses(ano, mesSelecionado) {
+    const mesesDoAno = [...new Set(dias.filter(d => d._ano === ano).map(d => d._mes))].sort().reverse();
+    selMes.innerHTML = '';
+    mesesDoAno.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = NOMES_MESES[parseInt(m, 10) - 1];
+      selMes.appendChild(opt);
+    });
+    selMes.value = mesesDoAno.includes(mesSelecionado) ? mesSelecionado : mesesDoAno[0];
+  }
+
+  function popularDias(ano, mes) {
+    const diasDoMes = dias.filter(d => d._ano === ano && d._mes === mes);
+    selDia.innerHTML = '';
+    diasDoMes.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.data;
+      opt.textContent = d.data_br + ' (' + d.rotas + ' rota(s))';
+      selDia.appendChild(opt);
+    });
+    if (diasDoMes.length) selDia.value = diasDoMes[0].data;
+  }
+
+  const anoAtual = '2026-07-06'.slice(0, 4);
+  const mesAtual = '2026-07-06'.slice(5, 7);
+  popularAnos(anoAtual);
+  popularMeses(selAno.value, mesAtual);
+  popularDias(selAno.value, selMes.value);
+  selDia.value = '2026-07-06';
+
+  selAno.addEventListener('change', () => {
+    popularMeses(selAno.value, selMes.value);
+    popularDias(selAno.value, selMes.value);
+  });
+  selMes.addEventListener('change', () => {
+    popularDias(selAno.value, selMes.value);
+  });
+  selDia.addEventListener('change', () => {
+    if (selDia.value) window.location.href = '../' + selDia.value + '/painel.html';
+  });
+}).catch(() => {});
+
+var motoristaFiltroValor = '';
+function motoristaFiltroAtual() { return motoristaFiltroValor; }
+
+function popularFiltroMotorista(rotas) {
+  const sel = document.getElementById('seletorMotorista');
+  if (!sel) return;
+  rotas.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.rotulo;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => {
+    motoristaFiltroValor = sel.value;
+    aplicarFiltroMotorista(motoristaFiltroValor);
+    atualizarMapaGeral();
+  });
+}
+
+const PALETA_CORES = ['#1f4e78','#c00000','#1e7e34','#b8860b','#6a1b9a','#008b8b','#d2691e','#4169e1','#a0522d','#2e8b57','#dc143c','#4682b4','#8b008b','#556b2f'];
+var mapaGeralInstancia = null;
+
+function corMotorista(indice) {
+  return PALETA_CORES[indice % PALETA_CORES.length];
+}
+
+function construirMapaGeral(grupos) {
+  const mapa = L.map('mapaGeral', { preferCanvas: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(mapa);
+
+  const iconeOrigem = L.divIcon({
+    className: 'icone-origem',
+    html: '<div style="background:#c00000;color:#fff;border-radius:50%;width:22px;height:22px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:12px;' +
+          'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">&#128666;</div>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
+  });
+
+  const pontos = [[ORIGEM_GERAL.lat, ORIGEM_GERAL.lon]];
+  L.marker([ORIGEM_GERAL.lat, ORIGEM_GERAL.lon], { icon: iconeOrigem })
+    .bindPopup('<b>Saida do caminhao</b>')
+    .addTo(mapa);
+
+  const legendaEl = document.getElementById('legendaMotoristas');
+  legendaEl.innerHTML = '';
+  grupos.forEach((grupo, i) => {
+    const cor = corMotorista(i);
+    const item = document.createElement('div');
+    item.className = 'legenda-item';
+    item.innerHTML = '<span class="legenda-cor" style="background:' + cor + '"></span>' + grupo.rotulo;
+    legendaEl.appendChild(item);
+    grupo.paradas.forEach(p => {
+      pontos.push([p.lat, p.lon]);
+      L.circleMarker([p.lat, p.lon], {
+        radius: 7, color: '#fff', weight: 1.5, fillColor: cor, fillOpacity: 0.9
+      }).bindPopup('<b>' + grupo.rotulo + '</b><br>' + p.seq + '. ' + p.cliente).addTo(mapa);
+    });
+  });
+  if (pontos.length) mapa.fitBounds(pontos, { padding: [30, 30] });
+  return mapa;
+}
+
+function atualizarMapaGeral() {
+  try {
+    const detalhes = document.getElementById('detalhesMapaGeral');
+    if (!detalhes || !detalhes.open) return;
+    if (mapaGeralInstancia) {
+      mapaGeralInstancia.remove();
+      mapaGeralInstancia = null;
+    }
+    mapaGeralInstancia = construirMapaGeral(gruposParaMapa(motoristaFiltroAtual()));
+  } catch (e) {
+    console.error('Falha ao montar o mapa combinado:', e);
+  }
+}
+
+const detalhesMapaGeralEl = document.getElementById('detalhesMapaGeral');
+if (detalhesMapaGeralEl) {
+  detalhesMapaGeralEl.addEventListener('toggle', atualizarMapaGeral);
+}
+
+</script>
+</body>
+</html>
