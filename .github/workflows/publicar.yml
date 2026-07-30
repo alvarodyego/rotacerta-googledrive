@@ -2,7 +2,10 @@ name: Publicar rotas a partir do Google Drive
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    # 03h e 15h UTC = meia-noite e meio-dia em Araguaina/TO (UTC-3, sem
+    # horario de verao). Agendamentos menos frequentes tendem a ser
+    # respeitados com menos atraso pelo GitHub do que "*/15 * * * *".
+    - cron: "0 3,15 * * *"
   workflow_dispatch: {}
 
 permissions:
