@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#1f4e78">
-<title>OLL-3030 - Sem motorista definido - Rota de entrega</title>
+<title>RMB-6G40 - Motorista 721 - Rota de entrega</title>
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -128,19 +128,19 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 <body>
 <div class="bloqueio"><div class="bloqueio-caixa"><h2>Rota protegida</h2><p>Digite a senha do motorista pra ver essa rota.</p><form id="formSenha"><input type="password" id="campoSenha" placeholder="Senha" autocomplete="current-password" required><button type="submit">Entrar</button></form><div class="bloqueio-erro" id="bloqueioErro"></div></div></div>
 <header>
-  <h1>OLL-3030 - Sem motorista definido</h1>
+  <h1>RMB-6G40 - Motorista 721</h1>
   <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
-  <div class="sub">Atualizado em 31/07/2026 06:11</div>
+  <div class="sub">Atualizado em 01/08/2026 05:53</div>
 </header>
 <div id="avisoAjuste"></div><div id="mapa"></div>
 <main>
   <ol class="paradas" id="listaParadas"></ol>
   <div class="resumo">
-    <div><span>Original (ida/volta)</span><b>18.19 km</b></div>
-    <div><span>Otimizada (ida/volta)</span><b>14.84 km</b></div>
-    <div><span>Economia</span><b>3.35 km (18.4%)</b></div>
-    <div><span>Saida &rarr; 1a parada</span><b>5.60 km</b></div>
-    <div><span>Ultima parada &rarr; volta</span><b>6.06 km</b></div>
+    <div><span>Original (ida/volta)</span><b>37.10 km</b></div>
+    <div><span>Otimizada (ida/volta)</span><b>29.28 km</b></div>
+    <div><span>Economia</span><b>7.82 km (21.1%)</b></div>
+    <div><span>Saida &rarr; 1a parada</span><b>1.89 km</b></div>
+    <div><span>Ultima parada &rarr; volta</span><b>8.37 km</b></div>
   </div>
 </main>
 <footer><a href="../index.html">Ver todas as rotas desta data</a></footer>
@@ -149,15 +149,15 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-const PARADAS = [{"seq": 1, "codigo": "", "pedido": "0094", "cliente": "", "endereco": "AL ARAGUAIA02, 142 -LOJA 130LOTEAMENTO MANSOES DARAGUAINATO - LOTEAMENTO MANSOES D - ARAGUAINA/TO - CEP 77814680", "lat": -7.206843, "lon": -48.218057, "dist_anterior_km": 5.599, "dist_proxima_km": 1.3657000000000001}, {"seq": 2, "codigo": "", "pedido": "0096", "cliente": "", "endereco": "AL ARAGUAIA QD16 LT01D LOJA124, 142LOTEAMENTO MANSOES DARAGUAINATO - LOTEAMENTO MANSOES D - ARAGUAINA/TO - CEP 77814680", "lat": -7.210783, "lon": -48.210203, "dist_anterior_km": 1.3657000000000001, "dist_proxima_km": 1.807}, {"seq": 3, "codigo": "", "pedido": "0095", "cliente": "", "endereco": "AL ARAGUAIA01, 142LOTEAMENTO MANSOES DARAGUAINATO - LOTEAMENTO MANSOES D - ARAGUAINA/TO - CEP 77814680", "lat": -7.215755, "lon": -48.219056, "dist_anterior_km": 1.807, "dist_proxima_km": null}];
+const PARADAS = [{"seq": 1, "codigo": "01000374", "pedido": "0193", "cliente": "MEDUSA BAR", "endereco": "RUA PRES 16 S/N -Q 71 L 9BAIRRO NOVA ARAGUAINARAGUAINATO - BAIRRO NOVA ARAGUAIN - ARAGUAINA/TO - CEP 77813820", "lat": -7.218489, "lon": -48.238889, "dist_anterior_km": 1.8876, "dist_proxima_km": 2.6746999999999996}, {"seq": 2, "codigo": "01000980", "pedido": "0265", "cliente": "SUP TIRADENTES 01", "endereco": "RUA JAU, 335LAGO AZUL 1ARAGUAINATO - LAGO AZUL 1 - ARAGUAINA/TO - CEP 77829252", "lat": -7.227367, "lon": -48.224801, "dist_anterior_km": 2.6746999999999996, "dist_proxima_km": 4.3579}, {"seq": 3, "codigo": "01002476", "pedido": "0200", "cliente": "BAR DO LUIZ       01", "endereco": "RU1 CARAMURU ELDORADO QD D LT11 A, 291BAIRRO ELDORADOARAGUAINATO - BAIRRO ELDORADO - ARAGUAINA/TO - CEP 77800000", "lat": -7.20996, "lon": -48.199834, "dist_anterior_km": 4.3579, "dist_proxima_km": 0.7071000000000001}, {"seq": 4, "codigo": "01002807", "pedido": "0284", "cliente": "EMPRESARIO BEBIDAS", "endereco": "RUA DAS DOMESTICAS, 66JARDIM PAULISTAARAGUAINATO - JARDIM PAULISTA - ARAGUAINA/TO - CEP 77809690", "lat": -7.204368, "lon": -48.20294, "dist_anterior_km": 0.7071000000000001, "dist_proxima_km": 0.6682}, {"seq": 5, "codigo": "01001296", "pedido": "0291", "cliente": "FULL TIME", "endereco": "RUA PREFEITO JOAO DE SOUSA LIMA, 934BAIRRO SAO JOAOARAGUAINATO - BAIRRO SAO JOAO - ARAGUAINA/TO - CEP 07807160", "lat": -7.201612, "lon": -48.201659, "dist_anterior_km": 0.6682, "dist_proxima_km": 0.3953}, {"seq": 6, "codigo": "01002570", "pedido": "0192", "cliente": "BAR DOS AMIGOS    03", "endereco": "RUA VINTE E UM DE MAIO, 42BAIRRO SANTA TEREZINARAGUAINATO - BAIRRO SANTA TEREZIN - ARAGUAINA/TO - CEP 77808360", "lat": -7.201297, "lon": -48.199041, "dist_anterior_km": 0.3953, "dist_proxima_km": 0.8472000000000001}, {"seq": 7, "codigo": "01001141", "pedido": "0191", "cliente": "SUPER TIRADENTES", "endereco": "AV TIRADENTES 1, 815 -01296BAIRRO SAO JOAOARAGUAINATO - BAIRRO SAO JOAO - ARAGUAINA/TO - CEP 77807170", "lat": -7.201388, "lon": -48.200786, "dist_anterior_km": 0.8472000000000001, "dist_proxima_km": 0.5786}, {"seq": 8, "codigo": "01002912", "pedido": "0310", "cliente": "BAR DO NEGAO      01", "endereco": "RUA PRINCESA ISABEL01 S/NBAIRRO SAO JOAOARAGUAINATO - BAIRRO SAO JOAO - ARAGUAINA/TO - CEP 77807030", "lat": -7.197407, "lon": -48.200354, "dist_anterior_km": 0.5786, "dist_proxima_km": 2.1944}, {"seq": 9, "codigo": "01002226", "pedido": "0197", "cliente": "PIZZARIA PARANA LTDA", "endereco": "RU1 ONZE S/N -Q 1 L 14VILA PATROCINIOARAGUAINATO - VILA PATROCINIO - ARAGUAINA/TO - CEP 77800000", "lat": -7.199758, "lon": -48.18553, "dist_anterior_km": 2.1944, "dist_proxima_km": 0.5531}, {"seq": 10, "codigo": "01002670", "pedido": "0190", "cliente": "BAR DO BOTELHO    01", "endereco": "RUA 0006, 26VILA PATROCINIOARAGUAINATO - VILA PATROCINIO - ARAGUAINA/TO - CEP 77826602", "lat": -7.198801, "lon": -48.182129, "dist_anterior_km": 0.5531, "dist_proxima_km": 0.5304}, {"seq": 11, "codigo": "01002742", "pedido": "0282", "cliente": "REST DA FATIMA", "endereco": "RUA SANTA TEREZINHA QD16 LT23, 200TEREZA HILARIOARAGUAINATO - TEREZA HILARIO - ARAGUAINA/TO - CEP 77826544", "lat": -7.195318, "lon": -48.180816, "dist_anterior_km": 0.5304, "dist_proxima_km": 5.3404}, {"seq": 12, "codigo": "01001267", "pedido": "0341", "cliente": "GOLD DISTRIBUIDORA D", "endereco": "AV CONEJO DE JOAO LIMA, 455ENTRONCAMENTOARAGUAINATO - ENTRONCAMENTO - ARAGUAINA/TO - CEP 77823065", "lat": -7.182474, "lon": -48.220068, "dist_anterior_km": 5.3404, "dist_proxima_km": 0.1779}, {"seq": 13, "codigo": "01000973", "pedido": "0345", "cliente": "LIGADAO", "endereco": "AV CONEGO JOAO LIMA, 333 -00686ENTRONCAMENTOARAGUAINATO - ENTRONCAMENTO - ARAGUAINA/TO - CEP 77825040", "lat": -7.181655, "lon": -48.220658, "dist_anterior_km": 0.1779, "dist_proxima_km": null}];
 const ORIGEM = {"lat": -7.22722092594843, "lon": -48.24978544427654};
-const TRACADO_IDA = [[-7.22693, -48.250414], [-7.221045, -48.247636], [-7.219996, -48.247447], [-7.214238, -48.244759], [-7.208713, -48.24213], [-7.208031, -48.241507], [-7.207152, -48.241101], [-7.207887, -48.239551], [-7.208322, -48.236399], [-7.208208, -48.234595], [-7.208017, -48.23381], [-7.203712, -48.223746], [-7.203132, -48.221163], [-7.203229, -48.220797], [-7.203017, -48.220643], [-7.202704, -48.219378], [-7.207252, -48.218279], [-7.207085, -48.217937], [-7.206956, -48.217672], [-7.208157, -48.216795], [-7.208455, -48.2164], [-7.20858, -48.215821], [-7.208023, -48.215594], [-7.208132, -48.214976], [-7.208766, -48.215095], [-7.208944, -48.215285], [-7.210325, -48.214246], [-7.209178, -48.213895], [-7.209784, -48.211845], [-7.209751, -48.211029], [-7.210862, -48.210332], [-7.211243, -48.210099], [-7.212915, -48.212527], [-7.208773, -48.215175], [-7.209426, -48.215876], [-7.210429, -48.216387], [-7.21054, -48.216529], [-7.210257, -48.216693], [-7.210375, -48.216892], [-7.210856, -48.216687], [-7.212184, -48.216791], [-7.213627, -48.216616], [-7.215419, -48.218312], [-7.215866, -48.218548]];
-const TRACADO_VOLTA = [[-7.215866, -48.218548], [-7.22074, -48.218613], [-7.220818, -48.228165], [-7.220212, -48.229531], [-7.220184, -48.230136], [-7.223462, -48.241241], [-7.223299, -48.24221], [-7.220508, -48.24796], [-7.229005, -48.251802], [-7.232203, -48.25296], [-7.232451, -48.252836], [-7.232268, -48.252508], [-7.229102, -48.251436], [-7.22693, -48.250414]];
-const DATA_ISO = '2026-07-30';
-const ROTULO_ROTA = "OLL-3030 - Sem motorista definido";
-const NUMERO_MOTORISTA = null;
-const ROTA_ID = "RT001012";
-const VEICULO_ORIGINAL = "OLL-3030";
+const TRACADO_IDA = [[-7.22693, -48.250414], [-7.221045, -48.247636], [-7.222131, -48.245364], [-7.22003, -48.244399], [-7.218501, -48.238885], [-7.218224, -48.237964], [-7.222376, -48.23671], [-7.220282, -48.230067], [-7.22092, -48.228155], [-7.226176, -48.228092], [-7.226177, -48.226319], [-7.227481, -48.226311], [-7.227466, -48.2248], [-7.227427, -48.217728], [-7.229377, -48.215247], [-7.228935, -48.214889], [-7.230395, -48.213067], [-7.222057, -48.206324], [-7.220851, -48.205698], [-7.218319, -48.202927], [-7.210308, -48.201299], [-7.210551, -48.199832], [-7.209943, -48.199806], [-7.204372, -48.202946], [-7.202913, -48.203759], [-7.202499, -48.201412], [-7.202259, -48.201226], [-7.201225, -48.201743], [-7.201613, -48.201661], [-7.202439, -48.201365], [-7.201165, -48.199113], [-7.199749, -48.196854], [-7.201833, -48.200609], [-7.201385, -48.200777], [-7.198581, -48.201822], [-7.198067, -48.200517], [-7.197406, -48.200354], [-7.197259, -48.199832], [-7.193732, -48.198948], [-7.195343, -48.192448], [-7.196641, -48.191494], [-7.197574, -48.190265], [-7.197881, -48.188828], [-7.20016, -48.185829], [-7.199761, -48.185525], [-7.198081, -48.184245], [-7.199717, -48.182252], [-7.199509, -48.181984], [-7.1988, -48.182133], [-7.199115, -48.180273], [-7.196123, -48.179569], [-7.195058, -48.180473], [-7.195291, -48.180833], [-7.196295, -48.182425], [-7.196091, -48.182729], [-7.2003, -48.185936], [-7.198269, -48.188637], [-7.197786, -48.189778], [-7.197537, -48.192883], [-7.191105, -48.213703], [-7.190303, -48.213582], [-7.18996, -48.214384], [-7.185691, -48.218483], [-7.182516, -48.220157], [-7.181388, -48.220694], [-7.181663, -48.220675]];
+const TRACADO_VOLTA = [[-7.181663, -48.220675], [-7.182212, -48.220302], [-7.178778, -48.221994], [-7.177894, -48.221704], [-7.190384, -48.233548], [-7.220508, -48.24796], [-7.232451, -48.252836], [-7.22693, -48.250414]];
+const DATA_ISO = '2026-07-31';
+const ROTULO_ROTA = "RMB-6G40 - Motorista 721";
+const NUMERO_MOTORISTA = "721";
+const ROTA_ID = "RT001009";
+const VEICULO_ORIGINAL = "RMB-6G40";
 
 // Status de entrega marcado pelo motorista (Entregue / Devolucao / Voltar
 // depois-Fechado). Fica salvo em 2 lugares: localStorage (instantaneo,
