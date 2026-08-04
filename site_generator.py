@@ -566,16 +566,24 @@ fetch('{manifest_rel}').then(r => r.json()).then(dias => {{
   popularDias(selAno.value, selMes.value);
   selDia.value = '{data_atual_iso}';
 
+  function navegarParaDiaSelecionado() {{
+    if (selDia.value) window.location.href = '{historico_base_rel}' + selDia.value + '/{arquivo_destino}';
+  }}
+
+  // Trocar ano/mes repopula o seletor de dia e ja' deixa o dia mais recente
+  // daquele mes pre-selecionado -- sem isso, quando esse dia pre-selecionado
+  // e' exatamente o que o usuario queria, o <select> de dia nunca dispara
+  // 'change' (o valor nao mudou de fato) e a navegacao parece nao acontecer.
   selAno.addEventListener('change', () => {{
     popularMeses(selAno.value, selMes.value);
     popularDias(selAno.value, selMes.value);
+    navegarParaDiaSelecionado();
   }});
   selMes.addEventListener('change', () => {{
     popularDias(selAno.value, selMes.value);
+    navegarParaDiaSelecionado();
   }});
-  selDia.addEventListener('change', () => {{
-    if (selDia.value) window.location.href = '{historico_base_rel}' + selDia.value + '/{arquivo_destino}';
-  }});
+  selDia.addEventListener('change', navegarParaDiaSelecionado);
 }}).catch(() => {{}});
 """
 

@@ -199,16 +199,20 @@ fetch('../manifest.json').then(r => r.json()).then(dias => {
   popularDias(selAno.value, selMes.value);
   selDia.value = '2026-07-23';
 
+  function navegarParaDiaSelecionado() {
+    if (selDia.value) window.location.href = '../' + selDia.value + '/index.html';
+  }
+
   selAno.addEventListener('change', () => {
     popularMeses(selAno.value, selMes.value);
     popularDias(selAno.value, selMes.value);
+    navegarParaDiaSelecionado();
   });
   selMes.addEventListener('change', () => {
     popularDias(selAno.value, selMes.value);
+    navegarParaDiaSelecionado();
   });
-  selDia.addEventListener('change', () => {
-    if (selDia.value) window.location.href = '../' + selDia.value + '/index.html';
-  });
+  selDia.addEventListener('change', navegarParaDiaSelecionado);
 }).catch(() => {});
 
 </script>
