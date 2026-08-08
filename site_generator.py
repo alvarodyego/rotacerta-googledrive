@@ -47,6 +47,7 @@ FIREBASE_CONFIG = {
 FIRESTORE_COLECAO_STATUS = "status_entregas"
 FIRESTORE_COLECAO_MOTORISTAS = "motoristas"
 FIRESTORE_COLECAO_AJUSTES = "ajustes_rotas"
+FIRESTORE_COLECAO_LOCALIZACAO = "localizacao_motoristas"
 
 # Faixa de numeros de motorista da empresa (720 a 731). Usado pra pre-gerar
 # senhas padrao na pagina de administracao. NAO e' derivado dos dados do
@@ -265,6 +266,40 @@ try {{
 }} catch (e) {{
   console.error('Firebase nao inicializou (marcacao vai funcionar so neste aparelho):', e);
 }}
+
+// Registra, uma vez ao abrir a pagina, a localizacao atual do aparelho (se
+// o motorista permitir) -- so' um "instantaneo" de onde ele estava no
+// momento do acesso, nao rastreamento continuo. Roda em segundo plano e
+// falha em silencio (sem alert, sem travar nada) se o GPS nao estiver
+// disponivel, o motorista negar a permissao, ou o Firestore recusar a
+// escrita -- essa funcionalidade nunca deve impedir o uso normal da rota.
+function registrarLocalizacao() {{
+  if (!db || !navigator.geolocation) return;
+  try {{
+    navigator.geolocation.getCurrentPosition(function(pos) {{
+      try {{
+        const chave = String(NUMERO_MOTORISTA || ROTA_ID);
+        db.collection('{firestore_colecao_localizacao}').doc(chave).set({{
+          data: DATA_ISO,
+          rota_id: ROTA_ID,
+          rotulo: ROTULO_ROTA,
+          numero_motorista: NUMERO_MOTORISTA,
+          veiculo: VEICULO_ORIGINAL,
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          precisao_m: pos.coords.accuracy,
+          maps_url: 'https://www.google.com/maps?q=' + pos.coords.latitude + ',' + pos.coords.longitude,
+          atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+        }}).catch(function(err) {{ console.error('Falha ao registrar localizacao:', err); }});
+      }} catch (e) {{ console.error('Falha ao registrar localizacao:', e); }}
+    }}, function(err) {{
+      console.warn('Localizacao indisponivel ou nao autorizada:', err.message);
+    }}, {{ enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }});
+  }} catch (e) {{
+    console.error('Geolocalizacao indisponivel neste navegador:', e);
+  }}
+}}
+registrarLocalizacao();
 
 function chaveStatus(codigo) {{
   return 'status_' + DATA_ISO + '_' + codigo;
@@ -1691,6 +1726,7 @@ def _gerar_paginas(
             firestore_colecao=FIRESTORE_COLECAO_STATUS,
             firestore_colecao_motoristas=FIRESTORE_COLECAO_MOTORISTAS,
             firestore_colecao_ajustes=FIRESTORE_COLECAO_AJUSTES,
+            firestore_colecao_localizacao=FIRESTORE_COLECAO_LOCALIZACAO,
             numero_motorista_json=json.dumps(numero_mot),
             rota_id_json=json.dumps(resultado.rota, ensure_ascii=False),
             veiculo_json=json.dumps(veiculo_orig, ensure_ascii=False),
