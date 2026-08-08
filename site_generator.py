@@ -640,8 +640,24 @@ _JS_MAPA_GERAL = """
 const PALETA_CORES = ['#1f4e78','#c00000','#1e7e34','#b8860b','#6a1b9a','#008b8b','#d2691e','#4169e1','#a0522d','#2e8b57','#dc143c','#4682b4','#8b008b','#556b2f'];
 var mapaGeralInstancia = null;
 
+// Ultima localizacao conhecida de cada motorista (colecao
+// "localizacao_motoristas" do Firestore), so' preenchida nas paginas que
+// escutam essa colecao (hoje, so' o painel do supervisor). Nas demais
+// paginas que reaproveitam este bloco (admin/analista) fica vazio, e o
+// mapa simplesmente nao desenha nenhum marcador de localizacao -- nao
+// quebra nada.
+let ultimasLocalizacoes = {{}};
+
 function corMotorista(indice) {{
   return PALETA_CORES[indice % PALETA_CORES.length];
+}}
+
+function tempoDecorrido(timestamp) {{
+  if (!timestamp || !timestamp.toDate) return '';
+  const diffMin = Math.round((Date.now() - timestamp.toDate().getTime()) / 60000);
+  if (diffMin < 1) return 'agora mesmo';
+  if (diffMin < 60) return 'ha ' + diffMin + ' min';
+  return 'ha ' + Math.round(diffMin / 60) + ' h';
 }}
 
 function construirMapaGeral(grupos) {{
@@ -680,6 +696,23 @@ function construirMapaGeral(grupos) {{
       }}).bindPopup('<b>' + grupo.rotulo + '</b><br>' + p.seq + '. ' + p.cliente).addTo(mapa);
     }});
   }});
+
+  const iconeLocalizacao = L.divIcon({{
+    className: 'icone-localizacao-motorista',
+    html: '<div style="background:#212529;color:#fff;border-radius:50%;width:24px;height:24px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:13px;' +
+          'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5);">&#128666;</div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  }});
+  Object.values(ultimasLocalizacoes).forEach(loc => {{
+    if (typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
+    pontos.push([loc.lat, loc.lon]);
+    L.marker([loc.lat, loc.lon], {{ icon: iconeLocalizacao, zIndexOffset: 1000 }})
+      .bindPopup('<b>' + (loc.rotulo || 'Motorista') + '</b><br>Ultima localizacao: ' + tempoDecorrido(loc.atualizado_em))
+      .addTo(mapa);
+  }});
+
   if (pontos.length) mapa.fitBounds(pontos, {{ padding: [30, 30] }});
   return mapa;
 }}
@@ -989,6 +1022,20 @@ if (db) {{
       renderizar();
       atualizarMapaGeral();
     }}, err => console.error('Falha ao acompanhar ajustes manuais:', err));
+
+  // Ultima localizacao de cada motorista (capturada quando ele abre a rota
+  // no celular -- ver registrarLocalizacao() em _ROTA_TEMPLATE). So'
+  // considera localizacoes do dia sendo visto (DATA_ISO): abrir um painel
+  // de um dia antigo nao deve mostrar a posicao de agora como se fosse
+  // daquele dia.
+  db.collection('{firestore_colecao_localizacao}').where('data', '==', DATA_ISO)
+    .onSnapshot(snapshot => {{
+      ultimasLocalizacoes = {{}};
+      snapshot.forEach(doc => {{
+        ultimasLocalizacoes[doc.id] = doc.data();
+      }});
+      atualizarMapaGeral();
+    }}, err => console.error('Falha ao acompanhar localizacao dos motoristas:', err));
 }}
 """ + _JS_FILTRO_DATA + _JS_FILTRO_MOTORISTA + _JS_MAPA_GERAL + """
 </script>
@@ -1571,6 +1618,7 @@ def gerar_painel(
         firestore_colecao=FIRESTORE_COLECAO_STATUS,
         firestore_colecao_motoristas=FIRESTORE_COLECAO_MOTORISTAS,
         firestore_colecao_ajustes=FIRESTORE_COLECAO_AJUSTES,
+        firestore_colecao_localizacao=FIRESTORE_COLECAO_LOCALIZACAO,
         manifest_rel=manifest_rel,
         historico_base_rel=historico_base_rel,
         hoje_rel=hoje_rel,
