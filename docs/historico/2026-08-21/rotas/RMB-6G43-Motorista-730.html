@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f4e78">
+<title>RMB-6G43 - Motorista 730 - Rota de entrega</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: var(--texto); background: #f4f6f8; -webkit-tap-highlight-color: transparent; animation: entrada 0.15s ease-out; }
+@keyframes entrada { from { opacity: 0; } to { opacity: 1; } }
+header { background: var(--azul); color: #fff; padding: 12px 16px; }
+header h1 { margin: 0; font-size: 1.1rem; }
+header .marca { font-size: 0.75rem; opacity: 0.9; margin-top: 3px; }
+header .sub { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+.filtro-data { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-data label { font-size: 0.85rem; }
+.filtro-data select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 160px; }
+.filtro-data select.compacta { flex: 0 1 100px; min-width: 90px; }
+.filtro-data a { font-size: 0.8rem; color: var(--azul); text-decoration: none; white-space: nowrap; }
+.filtro-motorista { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-motorista label { font-size: 0.85rem; }
+.filtro-motorista select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 200px; }
+.mapa-geral-details { background: #fff; border-bottom: 1px solid var(--borda); }
+.mapa-geral-details summary { padding: 12px 16px; font-size: 0.85rem; font-weight: bold; color: var(--azul); cursor: pointer; }
+.mapa-geral { width: 100%; height: 60vh; min-height: 400px; }
+.legenda-motoristas { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; font-size: 0.72rem; }
+.legenda-item { display: flex; align-items: center; gap: 5px; }
+.legenda-cor { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+.aviso-linha-reta { background: #fff3cd; color: #664d03; font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid #ffe69c; }
+.aviso-ajuste { background: var(--azul-claro); color: var(--azul); font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid var(--borda); }
+.resumo { font-size: 0.72rem; background: var(--azul-claro); display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-radius: 8px; margin-top: 4px; }
+.resumo > div { display: flex; flex-direction: column; }
+.resumo span { color: #555; }
+.resumo b { color: var(--azul); font-size: 0.8rem; }
+#mapa { width: 100%; height: 68vh; min-height: 460px; }
+main { max-width: 720px; margin: 0 auto; padding: 0 4px; }
+ol.paradas { list-style: none; margin: 0; padding: 8px; }
+.parada { display: flex; gap: 10px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.parada .num { background: var(--azul); color: #fff; border-radius: 50%; width: 26px; height: 26px; min-width: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; align-self: flex-start; }
+.parada .info { flex: 1; }
+.parada .codigo { font-size: 0.68rem; color: #888; font-weight: bold; }
+.parada .cliente { font-weight: bold; font-size: 0.85rem; }
+.parada .endereco { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.parada .meta { font-size: 0.68rem; color: var(--azul); margin-top: 4px; }
+.parada .btn-maps { display: inline-block; margin-top: 8px; padding: 6px 12px; background: var(--azul); color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: bold; }
+.parada .btn-maps:visited { color: #fff; }
+.parada.status-entregue { border-left: 4px solid #1e7e34; }
+.parada.status-devolucao { border-left: 4px solid #c00000; }
+.parada.status-fechado { border-left: 4px solid #b8860b; }
+.parada.tem-mensagem { border: 2px solid #ff6d00; background: #fff8f0; }
+.mensagem-admin { background: #ff6d00; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: bold; margin-top: 6px; }
+.status-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.status-btn { flex: 1; min-width: 84px; padding: 6px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; background: #fff; cursor: pointer; text-align: center; }
+.status-btn.entregue { border: 1.5px solid #1e7e34; color: #1e7e34; }
+.status-btn.devolucao { border: 1.5px solid #c00000; color: #c00000; }
+.status-btn.fechado { border: 1.5px solid #b8860b; color: #b8860b; }
+.status-btn.entregue.ativo { background: #1e7e34; color: #fff; }
+.status-btn.devolucao.ativo { background: #c00000; color: #fff; }
+.status-btn.fechado.ativo { background: #b8860b; color: #fff; }
+footer { text-align: center; font-size: 0.72rem; color: #888; padding: 16px; }
+footer a { color: var(--azul); }
+ul.lista-rotas { list-style: none; margin: 0; padding: 12px; max-width: 480px; margin: 0 auto; }
+ul.lista-rotas li { margin-bottom: 10px; }
+ul.lista-rotas a { display: block; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; text-decoration: none; color: var(--texto); font-weight: bold; }
+ul.lista-rotas a small { display: block; font-weight: normal; color: #666; margin-top: 4px; }
+.link-painel { display: block; text-align: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); font-size: 0.85rem; }
+.painel-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 10px; padding: 12px; }
+.painel-rota h2 { margin: 0 0 8px 0; font-size: 0.95rem; }
+.painel-contagem { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; font-weight: bold; margin-bottom: 8px; }
+.painel-contagem .c-entregue { color: #1e7e34; }
+.painel-contagem .c-devolucao { color: #c00000; }
+.painel-contagem .c-fechado { color: #b8860b; }
+.painel-contagem .c-pendente { color: #888; }
+.painel-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 0.75rem; padding: 5px 0; border-top: 1px solid #f0f0f0; }
+.painel-linha .p-status { font-weight: bold; white-space: nowrap; }
+.painel-linha.status-entregue .p-status { color: #1e7e34; }
+.painel-linha.status-devolucao .p-status { color: #c00000; }
+.painel-linha.status-fechado .p-status { color: #b8860b; }
+.painel-linha.status-pendente .p-status { color: #bbb; }
+.btn-aviso { padding: 3px 8px; border-radius: 5px; border: 1.5px solid #ff6d00; color: #ff6d00; background: #fff; font-size: 0.66rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.painel-atualizado { text-align: center; font-size: 0.7rem; color: #888; padding: 8px; }
+.bloqueio { display: none; position: fixed; inset: 0; background: var(--azul); color: #fff; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+body.bloqueado .bloqueio { display: flex; }
+body.bloqueado > *:not(.bloqueio) { display: none !important; }
+.bloqueio-caixa { max-width: 320px; width: 100%; text-align: center; }
+.bloqueio-caixa h2 { margin: 0 0 4px 0; font-size: 1.1rem; }
+.bloqueio-caixa p { font-size: 0.8rem; opacity: 0.85; margin: 0 0 16px 0; }
+.bloqueio-caixa input { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
+.bloqueio-caixa button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fff; color: var(--azul); font-weight: bold; font-size: 1rem; cursor: pointer; }
+.bloqueio-erro { color: #ffd6d6; font-size: 0.78rem; margin-top: 10px; min-height: 1em; }
+.admin-linha { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 8px 10px; }
+.admin-linha span { min-width: 40px; font-weight: bold; font-size: 0.85rem; }
+.admin-linha input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.admin-linha button { padding: 8px 12px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.admin-topo { display: flex; gap: 8px; padding: 10px; flex-wrap: wrap; }
+.admin-topo button { padding: 10px 14px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+.admin-msg { text-align: center; font-size: 0.8rem; padding: 8px; min-height: 1.2em; }
+.secao-titulo { font-size: 1rem; margin: 18px 12px 6px 12px; color: var(--azul); }
+.ajuste-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 10px 10px; padding: 10px 12px; }
+.ajuste-rota summary { font-weight: bold; cursor: pointer; }
+.ajuste-rota summary small { font-weight: normal; color: #666; }
+.ajuste-campos { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.ajuste-campo { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.ajuste-campo select, .ajuste-campo input[type=text] { padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.ajuste-paradas { max-height: 320px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 6px; margin-bottom: 10px; }
+.ajuste-parada { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid #f0f0f0; }
+.ajuste-parada:last-child { border-bottom: none; }
+.ajuste-parada { flex-wrap: wrap; }
+.ajuste-parada .ap-nome { flex: 1; min-width: 140px; }
+.ajuste-parada .ap-pos { width: 52px; padding: 5px; border-radius: 5px; border: 1px solid var(--borda); text-align: center; }
+.ajuste-parada .ap-mensagem { flex: 1 1 100%; padding: 6px 8px; border-radius: 5px; border: 1px solid var(--borda); font-size: 0.78rem; margin-top: 4px; }
+.ajuste-parada.ap-excluida { opacity: 0.5; text-decoration: line-through; }
+.ajuste-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.ajuste-botoes button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.ajuste-botoes .btn-salvar { background: var(--azul); color: #fff; }
+.ajuste-botoes .btn-limpar { background: #fff; border: 1.5px solid #c00000 !important; color: #c00000; }
+.ajuste-status { font-size: 0.75rem; margin-top: 6px; min-height: 1.1em; }
+.tag-ajustada { display: inline-block; background: var(--azul); color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.tag-mensagem { display: inline-block; background: #ff6d00; color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="bloqueio"><div class="bloqueio-caixa"><h2>Rota protegida</h2><p>Digite a senha do motorista pra ver essa rota.</p><form id="formSenha"><input type="password" id="campoSenha" placeholder="Senha" autocomplete="current-password" required><button type="submit">Entrar</button></form><div class="bloqueio-erro" id="bloqueioErro"></div></div></div>
+<header>
+  <h1>RMB-6G43 - Motorista 730</h1>
+  <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
+  <div class="sub">Atualizado em 22/08/2026 03:39</div>
+</header>
+<div id="avisoAjuste"></div><div id="mapa"></div>
+<main>
+  <ol class="paradas" id="listaParadas"></ol>
+  <div class="resumo">
+    <div><span>Original (ida/volta)</span><b>313.65 km</b></div>
+    <div><span>Otimizada (ida/volta)</span><b>307.59 km</b></div>
+    <div><span>Economia</span><b>6.06 km (1.9%)</b></div>
+    <div><span>Saida &rarr; 1a parada</span><b>86.85 km</b></div>
+    <div><span>Ultima parada &rarr; volta</span><b>101.88 km</b></div>
+  </div>
+</main>
+<footer><a href="../index.html">Ver todas as rotas desta data</a></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const PARADAS = [{"seq": 1, "codigo": "01070032", "pedido": "0148", "cliente": "LANCH VITORIA 01", "endereco": "AV BERNADO SAYAO S/N -01411CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.711124, "lon": -47.757238, "dist_anterior_km": 86.8465, "dist_proxima_km": 0.1273}, {"seq": 2, "codigo": "00440383", "pedido": "0150", "cliente": "CHURRASCARIA GRILL", "endereco": "AV DAS NACOES, 100CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.710422, "lon": -47.757378, "dist_anterior_km": 0.1273, "dist_proxima_km": 0.31160000000000004}, {"seq": 3, "codigo": "00440390", "pedido": "0161", "cliente": "PANTANAL HOTEL E RES", "endereco": "ROD BR 226 KM 39 S/NCENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.709342, "lon": -47.756483, "dist_anterior_km": 0.31160000000000004, "dist_proxima_km": 0.4607}, {"seq": 4, "codigo": "01070001", "pedido": "0138", "cliente": "CASA DE CARNE MERCES", "endereco": "RUA 15 DE NOVEMBRO SN S/N -01380CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.709192, "lon": -47.753908, "dist_anterior_km": 0.4607, "dist_proxima_km": 0.0888}, {"seq": 5, "codigo": "01070009", "pedido": "0135", "cliente": "CARLINHO PONTO COM", "endereco": "PRC PRC PREFEITURA SN S/N -01388CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.708823, "lon": -47.753503, "dist_anterior_km": 0.0888, "dist_proxima_km": 0.048}, {"seq": 6, "codigo": "01070031", "pedido": "0133", "cliente": "PONTO X LANCHE", "endereco": "PRC PRC DA PREFEITURA SN S/N -01410CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.708793, "lon": -47.753357, "dist_anterior_km": 0.048, "dist_proxima_km": 0.0003}, {"seq": 7, "codigo": "01070057", "pedido": "0134", "cliente": "NA BRAZZA", "endereco": "RUI 01 DE MAIO CX 02 S/NCENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.708786, "lon": -47.753306, "dist_anterior_km": 0.0003, "dist_proxima_km": 0.29660000000000003}, {"seq": 8, "codigo": "00440397", "pedido": "0128", "cliente": "ADEGA TERRA SECA  02", "endereco": "RU1 7 DE SETEMBRO SNN S/NCENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.708079, "lon": -47.751677, "dist_anterior_km": 0.29660000000000003, "dist_proxima_km": 0.2504}, {"seq": 9, "codigo": "01070034", "pedido": "0166", "cliente": "ESPETO MEDRADO", "endereco": "RUA 13 DE MAIO S/N -01413CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.708287, "lon": -47.749914, "dist_anterior_km": 0.2504, "dist_proxima_km": 0.30410000000000004}, {"seq": 10, "codigo": "00440376", "pedido": "0160", "cliente": "PERU LANCHES", "endereco": "RU1 PRINCESA ISABEL, 643CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.70774, "lon": -47.749516, "dist_anterior_km": 0.30410000000000004, "dist_proxima_km": 0.0332}, {"seq": 11, "codigo": "00440388", "pedido": "0141", "cliente": "LANCH E PAST BELA VI", "endereco": "RU1 13 DE MAIO, 927SETOR BELA VISTADARCINOPOLISTO - SETOR BELA VISTA - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.707554, "lon": -47.749661, "dist_anterior_km": 0.0332, "dist_proxima_km": 0.07859999999999999}, {"seq": 12, "codigo": "01070059", "pedido": "0140", "cliente": "IDEL SUPERMERCADO", "endereco": "RUA DARCINOPOLIS S/NSETOR BELA VISTADARCINOPOLISTO - SETOR BELA VISTA - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.708155, "lon": -47.750032, "dist_anterior_km": 0.07859999999999999, "dist_proxima_km": 0.292}, {"seq": 13, "codigo": "00440385", "pedido": "0143", "cliente": "DIST DO JOAO DA PRAT", "endereco": "RU1 PRINCESA ISABEL, 781CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.707151, "lon": -47.747685, "dist_anterior_km": 0.292, "dist_proxima_km": 0.1022}, {"seq": 14, "codigo": "01070036", "pedido": "0144", "cliente": "COML DEUS E AMOR", "endereco": "RUA DAS LARANJEIRAS S/N -01415CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.707732, "lon": -47.747308, "dist_anterior_km": 0.1022, "dist_proxima_km": 0.1389}, {"seq": 15, "codigo": "00440406", "pedido": "0145", "cliente": "COMER E ACOUGUE ALIA", "endereco": "RUI DAS LARANJEIRAS, 535SETOR BELA VISTADARCINOPOLISTO - SETOR BELA VISTA - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.70729, "lon": -47.746133, "dist_anterior_km": 0.1389, "dist_proxima_km": 0.10490000000000001}, {"seq": 16, "codigo": "00440402", "pedido": "0142", "cliente": "ADEGA GELA GUELA", "endereco": "RU1 DAS LARANJEIRAS S/NSETOR BELA VISTADARCINOPOLISTO - SETOR BELA VISTA - DARCINOPOLIS/TO - CEP 77870000", "lat": -6.707116, "lon": -47.7452, "dist_anterior_km": 0.10490000000000001, "dist_proxima_km": 0.1422}, {"seq": 17, "codigo": "01070018", "pedido": "0139", "cliente": "BAR DO DEUSDETH", "endereco": "RUA DAS LARANJEIRAS S/N -01397CENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.707105, "lon": -47.7439, "dist_anterior_km": 0.1422, "dist_proxima_km": 0.1251}, {"seq": 18, "codigo": "00440382", "pedido": "0159", "cliente": "MANGUEIRAOS BAR", "endereco": "RU1 SAO FRANCISCO QR08 LT07, 343ALTO BONITODARCINOPOLISTO - ALTO BONITO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.705839, "lon": -47.743616, "dist_anterior_km": 0.1251, "dist_proxima_km": 0.1846}, {"seq": 19, "codigo": "01070058", "pedido": "0146", "cliente": "BAR DO RAIMUNDO   04", "endereco": "RUI ALVINO MARTINS QD08 LT09 S/NALTO BONITODARCINOPOLISTO - ALTO BONITO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.704802, "lon": -47.743836, "dist_anterior_km": 0.1846, "dist_proxima_km": 0.16019999999999998}, {"seq": 20, "codigo": "00440384", "pedido": "0149", "cliente": "PEIXARIA ALTO BONITO", "endereco": "RUA 06 DE AGOSTO S/NALTO BONITODARCINOPOLISTO - ALTO BONITO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.703977, "lon": -47.74302, "dist_anterior_km": 0.16019999999999998, "dist_proxima_km": 1.8957}, {"seq": 21, "codigo": "00440379", "pedido": "0147", "cliente": "CANTINHO BR", "endereco": "RUA BERNANDO SAYAO S/NCENTRODARCINOPOLISTO - CENTRO - DARCINOPOLIS/TO - CEP 77910000", "lat": -6.706214, "lon": -47.754126, "dist_anterior_km": 1.8957, "dist_proxima_km": 44.5375}, {"seq": 22, "codigo": "00050237", "pedido": "0170", "cliente": "BAR DO ZIANO", "endereco": "RUA PRINCIPAL POVOADO MATA REDONDA S/NZONA RURALANGICOTO - ZONA RURAL - ANGICO/TO - CEP 77905000", "lat": -6.412286, "lon": -47.852099, "dist_anterior_km": 44.5375, "dist_proxima_km": 0.0506}, {"seq": 23, "codigo": "00050229", "pedido": "0152", "cliente": "BAR DO ZEZIM      01", "endereco": "RUA POVOADO MATO REDONDO S/NZONA RURALANGICOTO - ZONA RURAL - ANGICO/TO - CEP 77905000", "lat": -6.411964, "lon": -47.85215, "dist_anterior_km": 0.0506, "dist_proxima_km": 3.182}, {"seq": 24, "codigo": "00050247", "pedido": "0153", "cliente": "BIG LANCHES", "endereco": "RUA RUA NOVA, 626CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.39149, "lon": -47.864572, "dist_anterior_km": 3.182, "dist_proxima_km": 0.21180000000000002}, {"seq": 25, "codigo": "00050261", "pedido": "0018", "cliente": "ADEGA DO MAX      01", "endereco": "RU1 RUA NOVA, 719CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.390169, "lon": -47.864567, "dist_anterior_km": 0.21180000000000002, "dist_proxima_km": 0.1017}, {"seq": 26, "codigo": "00050234", "pedido": "0156", "cliente": "BAR DO JUCA", "endereco": "RUA DO COMERCIO, 745CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.389434, "lon": -47.864641, "dist_anterior_km": 0.1017, "dist_proxima_km": 0.06509999999999999}, {"seq": 27, "codigo": "00050244", "pedido": "0168", "cliente": "BAR DO ANTONIO LOBO", "endereco": "RUA JUCA DIAS, 428CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.389449, "lon": -47.865033, "dist_anterior_km": 0.06509999999999999, "dist_proxima_km": 0.0464}, {"seq": 28, "codigo": "00050252", "pedido": "0163", "cliente": "SUPERMECADO LILI II", "endereco": "RUA RUA DO COMERCIO, 663CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.389232, "lon": -47.865283, "dist_anterior_km": 0.0464, "dist_proxima_km": 0.0522}, {"seq": 29, "codigo": "00050248", "pedido": "0158", "cliente": "BAR DO JEOVA      01", "endereco": "RU1 JOAO JOSE DE SOUSA S/NCENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.389075, "lon": -47.865642, "dist_anterior_km": 0.0522, "dist_proxima_km": 0.2394}, {"seq": 30, "codigo": "00050262", "pedido": "0016", "cliente": "STYLER BARBEARIA", "endereco": "RUA DAS MANGUEIRAS S/NCENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.388554, "lon": -47.864503, "dist_anterior_km": 0.2394, "dist_proxima_km": 0.11170000000000001}, {"seq": 31, "codigo": "00050263", "pedido": "0157", "cliente": "ELITE BIKE", "endereco": "RUI SANTA CATARINA LT13 Q16 S/NCENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.388576, "lon": -47.863731, "dist_anterior_km": 0.11170000000000001, "dist_proxima_km": 0.13319999999999999}, {"seq": 32, "codigo": "00050265", "pedido": "0155", "cliente": "MERCADINHO MEGA BOX", "endereco": "RUI DO COMERCIO, 971CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.389455, "lon": -47.863556, "dist_anterior_km": 0.13319999999999999, "dist_proxima_km": 0.24380000000000002}, {"seq": 33, "codigo": "00050256", "pedido": "0151", "cliente": "BR CONVENIENCIA   01", "endereco": "AV COMERCIAL, 1CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.391485, "lon": -47.8643, "dist_anterior_km": 0.24380000000000002, "dist_proxima_km": 0.31239999999999996}, {"seq": 34, "codigo": "00050233", "pedido": "0154", "cliente": "TOCA DO BODE", "endereco": "RUA TOCANTINS, 341CENTROANGICOTO - CENTRO - ANGICO/TO - CEP 77905000", "lat": -6.390572, "lon": -47.863843, "dist_anterior_km": 0.31239999999999996, "dist_proxima_km": 24.9389}, {"seq": 35, "codigo": "00040218", "pedido": "0129", "cliente": "BALNEARIO PORCOS", "endereco": "AV BETEL SN S/NCENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.382906, "lon": -48.063016, "dist_anterior_km": 24.9389, "dist_proxima_km": 0.6952}, {"seq": 36, "codigo": "00040233", "pedido": "0043", "cliente": "CHURASQUINHO DA BB", "endereco": "AV BETEL, 1204CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77880000", "lat": -6.376988, "lon": -48.065136, "dist_anterior_km": 0.6952, "dist_proxima_km": 0.7353}, {"seq": 37, "codigo": "00040179", "pedido": "0013", "cliente": "ADEGA DO EDIMILSON", "endereco": "AV DUQUE DE CAXIAS, 39CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.372758, "lon": -48.069069, "dist_anterior_km": 0.7353, "dist_proxima_km": 0.09359999999999999}, {"seq": 38, "codigo": "00040206", "pedido": "0004", "cliente": "ADEGA DO GORDIM   01", "endereco": "AV DUQUE DE CAXIAS, 154CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.373427, "lon": -48.069598, "dist_anterior_km": 0.09359999999999999, "dist_proxima_km": 0.038799999999999994}, {"seq": 39, "codigo": "00040178", "pedido": "0012", "cliente": "MERCEARIA SAO FELIX", "endereco": "AV DUQUE DE CAXIAS, 178CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.373629, "lon": -48.069889, "dist_anterior_km": 0.038799999999999994, "dist_proxima_km": 0.2701}, {"seq": 40, "codigo": "00040181", "pedido": "0006", "cliente": "MERCADINHO CARDOSO", "endereco": "RU1 GETULIO VARGAS, 42SETOR ALASKAANANASTO - SETOR ALASKA - ANANAS/TO - CEP 77890000", "lat": -6.374441, "lon": -48.071953, "dist_anterior_km": 0.2701, "dist_proxima_km": 0.09090000000000001}, {"seq": 41, "codigo": "00040255", "pedido": "0136", "cliente": "DISTRIBUIDORA D DUDU", "endereco": "RUI PRIMAVERA, 445CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.374908, "lon": -48.07201, "dist_anterior_km": 0.09090000000000001, "dist_proxima_km": 0.0787}, {"seq": 42, "codigo": "00040229", "pedido": "0167", "cliente": "ADEGA IMPERIOS", "endereco": "RU1 RUA DUQUE DE CAXIAS S/NCHAPADINHA IANANASTO - CHAPADINHA I - ANANAS/TO - CEP 77890000", "lat": -6.375146, "lon": -48.07264, "dist_anterior_km": 0.0787, "dist_proxima_km": 0.0577}, {"seq": 43, "codigo": "00040175", "pedido": "0002", "cliente": "BUTECO DO PELEZINHO", "endereco": "RU1 14 DE OUTUBRO BAIRRO S/NSETOR ALASKAANANASTO - SETOR ALASKA - ANANAS/TO - CEP 77890000", "lat": -6.37522, "lon": -48.072984, "dist_anterior_km": 0.0577, "dist_proxima_km": 0.3664}, {"seq": 44, "codigo": "00040222", "pedido": "0009", "cliente": "DOM BARBER", "endereco": "RU1 PROFESSOR JOSE DE ASSIS, 65CHAPADINHA IANANASTO - CHAPADINHA I - ANANAS/TO - CEP 77890000", "lat": -6.376588, "lon": -48.072703, "dist_anterior_km": 0.3664, "dist_proxima_km": 0.2445}, {"seq": 45, "codigo": "00040186", "pedido": "0010", "cliente": "COMERCIAL PEREIRA 01", "endereco": "RU1 DOM ORIONE, 144CHAPADINHA IIANANASTO - CHAPADINHA II - ANANAS/TO - CEP 77890000", "lat": -6.37625, "lon": -48.071041, "dist_anterior_km": 0.2445, "dist_proxima_km": 0.323}, {"seq": 46, "codigo": "00040188", "pedido": "0008", "cliente": "BAR E ADEGA DA MAUIL", "endereco": "RU1 PROFESSOR JOSE DE ASSIS, 410CHAPADINHA IIANANASTO - CHAPADINHA II - ANANAS/TO - CEP 77890000", "lat": -6.378433, "lon": -48.07084, "dist_anterior_km": 0.323, "dist_proxima_km": 0.5388}, {"seq": 47, "codigo": "00040237", "pedido": "0007", "cliente": "HOUSE M DIST BEBIDAS", "endereco": "RU1 RUA JOSE HONORATO DA CRUZ, 163CHAPADINHA IIANANASTO - CHAPADINHA II - ANANAS/TO - CEP 77890000", "lat": -6.375212, "lon": -48.069099, "dist_anterior_km": 0.5388, "dist_proxima_km": 0.212}, {"seq": 48, "codigo": "00040242", "pedido": "0131", "cliente": "ADEGA LOPES       01", "endereco": "RU1 PROFESSOR AUGUSTO MOREIRA, 128CHAPADINHA IIANANASTO - CHAPADINHA II - ANANAS/TO - CEP 77890000", "lat": -6.373908, "lon": -48.069452, "dist_anterior_km": 0.212, "dist_proxima_km": 0.0053}, {"seq": 49, "codigo": "00040250", "pedido": "0011", "cliente": "MERCADINHO CHAPADINH", "endereco": "RU1 AUGUSTO MOREIRA S/NCENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.373855, "lon": -48.069475, "dist_anterior_km": 0.0053, "dist_proxima_km": 0.35760000000000003}, {"seq": 50, "codigo": "00040249", "pedido": "0005", "cliente": "MERCEARIA OLIVEIRA02", "endereco": "RU1 JESURALEM S/NCENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.373396, "lon": -48.072101, "dist_anterior_km": 0.35760000000000003, "dist_proxima_km": 0.3447}, {"seq": 51, "codigo": "00040238", "pedido": "0014", "cliente": "ADEGA SOARES      01", "endereco": "AV AV BETEL, 176CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.370643, "lon": -48.071322, "dist_anterior_km": 0.3447, "dist_proxima_km": 0.0141}, {"seq": 52, "codigo": "00040253", "pedido": "0113", "cliente": "TJ CARNES", "endereco": "AV BETEL, 169CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.37057, "lon": -48.071428, "dist_anterior_km": 0.0141, "dist_proxima_km": 0.1381}, {"seq": 53, "codigo": "00040164", "pedido": "0015", "cliente": "VERAS BAR", "endereco": "AV BETEL, 27CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.369478, "lon": -48.072037, "dist_anterior_km": 0.1381, "dist_proxima_km": 0.1507}, {"seq": 54, "codigo": "00040165", "pedido": "0120", "cliente": "SUP NOVO HORIZONTE", "endereco": "AV BRASILLL, 485CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.369149, "lon": -48.072236, "dist_anterior_km": 0.1507, "dist_proxima_km": 0.1782}, {"seq": 55, "codigo": "00040236", "pedido": "0003", "cliente": "EMPORI CARNES CASTRO", "endereco": "AV AVENIDA BRASIL, 385CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.36812, "lon": -48.072823, "dist_anterior_km": 0.1782, "dist_proxima_km": 0.187}, {"seq": 56, "codigo": "00040244", "pedido": "0017", "cliente": "COMERCIAL AVENIDA", "endereco": "AV BRASIL SALAO 01, 232CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.367244, "lon": -48.073575, "dist_anterior_km": 0.187, "dist_proxima_km": 0.2819}, {"seq": 57, "codigo": "00040254", "pedido": "0022", "cliente": "REI DAS CARNES", "endereco": "RUI SAP PEDRO SALA D S/NCENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.366738, "lon": -48.074216, "dist_anterior_km": 0.2819, "dist_proxima_km": 0.0621}, {"seq": 58, "codigo": "00040247", "pedido": "0121", "cliente": "ACOUGUE CINCO IRMAOS", "endereco": "RUA ANANAS, 54CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.367106, "lon": -48.07464, "dist_anterior_km": 0.0621, "dist_proxima_km": 0.0902}, {"seq": 59, "codigo": "00040169", "pedido": "0132", "cliente": "ADEGA DA LOIRA    01", "endereco": "RUA OLAVO BILAC, 1CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.366807, "lon": -48.074956, "dist_anterior_km": 0.0902, "dist_proxima_km": 0.1298}, {"seq": 60, "codigo": "00040180", "pedido": "0165", "cliente": "ADEGA DO BAXIM", "endereco": "RU1 SAO PEDRO, 201CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.367766, "lon": -48.075603, "dist_anterior_km": 0.1298, "dist_proxima_km": 0.35719999999999996}, {"seq": 61, "codigo": "00040193", "pedido": "0164", "cliente": "BAR DO DASICO", "endereco": "RU1 ANTONIO MOREIRA, 414CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.366062, "lon": -48.07502, "dist_anterior_km": 0.35719999999999996, "dist_proxima_km": 0.22640000000000002}, {"seq": 62, "codigo": "00040213", "pedido": "0127", "cliente": "OFICINA E MERC DO CH", "endereco": "RU1 ANTONIO MOREIRA, 350CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.365308, "lon": -48.074856, "dist_anterior_km": 0.22640000000000002, "dist_proxima_km": 0.43069999999999997}, {"seq": 63, "codigo": "00040171", "pedido": "0124", "cliente": "BAR DO TARSO", "endereco": "RU1 JOSE DE ALENCAR BAIRRO QUATRO BOCAS, 218CENTROANANASTO - CENTRO - ANANAS/TO - CEP 79800003", "lat": -6.361863, "lon": -48.073802, "dist_anterior_km": 0.43069999999999997, "dist_proxima_km": 1.0748}, {"seq": 64, "codigo": "00040258", "pedido": "0123", "cliente": "BAR DA DIJE", "endereco": "AV BRIGADEIRO EDUARDO GOMES, 238CENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.368391, "lon": -48.079063, "dist_anterior_km": 1.0748, "dist_proxima_km": 0.2176}, {"seq": 65, "codigo": "00040241", "pedido": "0162", "cliente": "KABANAS BAR E DISTRI", "endereco": "RU1 RUA SAP PEDRO S/NCENTROANANASTO - CENTRO - ANANAS/TO - CEP 77890000", "lat": -6.368863, "lon": -48.080982, "dist_anterior_km": 0.2176, "dist_proxima_km": 0.5666}, {"seq": 66, "codigo": "00040235", "pedido": "0130", "cliente": "IMPERIO PAULISTA", "endereco": "RU1 SALVADOR BORGES S/NVILA RAIMUNDA ROSAANANASTO - VILA RAIMUNDA ROSA - ANANAS/TO - CEP 77890000", "lat": -6.367257, "lon": -48.083171, "dist_anterior_km": 0.5666, "dist_proxima_km": 5.6685}, {"seq": 67, "codigo": "00040245", "pedido": "0137", "cliente": "CLUB DO N AMIGO ADAO", "endereco": "RUA RUA DO COLEGIO S/NPOV SAO RAIMUNDOANANASTO - POV SAO RAIMUNDO - ANANAS/TO - CEP 77890000", "lat": -6.404025, "lon": -48.094536, "dist_anterior_km": 5.6685, "dist_proxima_km": 0.0273}, {"seq": 68, "codigo": "00040192", "pedido": "0119", "cliente": "MERCADINHO MENEZES", "endereco": "RU1 DO COLEGIO SN S/NPOV SAO RAIMUNDOANANASTO - POV SAO RAIMUNDO - ANANAS/TO - CEP 77890000", "lat": -6.404262, "lon": -48.09461, "dist_anterior_km": 0.0273, "dist_proxima_km": 7.0363}, {"seq": 69, "codigo": "00410332", "pedido": "0122", "cliente": "DIST DE BEB 1 OPCAO", "endereco": "AV JERUSALEM S/NCENTRORIACHINHOTO - CENTRO - RIACHINHO/TO - CEP 77893000", "lat": -6.442134, "lon": -48.137674, "dist_anterior_km": 7.0363, "dist_proxima_km": 0.168}, {"seq": 70, "codigo": "00410344", "pedido": "0108", "cliente": "SUP DEUS E FIEL", "endereco": "AV JERUSALEM 0 S/NCENTRORIACHINHOTO - CENTRO - RIACHINHO/TO - CEP 77893000", "lat": -6.440753, "lon": -48.138306, "dist_anterior_km": 0.168, "dist_proxima_km": 0.7018}, {"seq": 71, "codigo": "00410353", "pedido": "0109", "cliente": "BALNEARIO CAI NA AGU", "endereco": "CHC CHACARA CAI NA AGUA S/NZONA RURALRIACHINHOTO - ZONA RURAL - RIACHINHO/TO - CEP 77893000", "lat": -6.436161, "lon": -48.142263, "dist_anterior_km": 0.7018, "dist_proxima_km": 10.149899999999999}, {"seq": 72, "codigo": "00410342", "pedido": "0110", "cliente": "MERCEARIA DO ANTON01", "endereco": "RU1 PRINCIPAL SSN0 S/NPOVOADO SOROROCARIACHINHOTO - POVOADO SOROROCA - RIACHINHO/TO - CEP 77893000", "lat": -6.482948, "lon": -48.090487, "dist_anterior_km": 10.149899999999999, "dist_proxima_km": 2.1434}, {"seq": 73, "codigo": "00410326", "pedido": "0118", "cliente": "BRAZINHA BAR", "endereco": "POV POVOADO SOROROCA S/NCENTRO DOS BORGESRIACHINHOTO - CENTRO DOS BORGES - RIACHINHO/TO - CEP 77893000", "lat": -6.494815, "lon": -48.076327, "dist_anterior_km": 2.1434, "dist_proxima_km": 2.3367}, {"seq": 74, "codigo": "00410329", "pedido": "0117", "cliente": "MERC BOM PRECO    01", "endereco": "RU1 VICENTE BARROS S/NANANASRIACHINHOTO - ANANAS - RIACHINHO/TO - CEP 77893000", "lat": -6.5019, "lon": -48.056748, "dist_anterior_km": 2.3367, "dist_proxima_km": 1.5349000000000002}, {"seq": 75, "codigo": "00410341", "pedido": "0111", "cliente": "MERC LAVAJATO SOARES", "endereco": "RU1 VICENTE BORGES SNN S/NCENTRO DOS BORGESRIACHINHOTO - CENTRO DOS BORGES - RIACHINHO/TO - CEP 77893000", "lat": -6.503487, "lon": -48.053715, "dist_anterior_km": 1.5349000000000002, "dist_proxima_km": 0.2393}, {"seq": 76, "codigo": "01002970", "pedido": "0112", "cliente": "AGRO COMPO", "endereco": "RUA RIACHINHO S/NCENTRO DOS BORGESRIACHINHOTO - CENTRO DOS BORGES - RIACHINHO/TO - CEP 77893000", "lat": -6.503573, "lon": -48.05351, "dist_anterior_km": 0.2393, "dist_proxima_km": 0.3585}, {"seq": 77, "codigo": "00410336", "pedido": "0116", "cliente": "ADEGA GABRIEL", "endereco": "RU1 VICENTE BORGEESS S/NANANASRIACHINHOTO - ANANAS - RIACHINHO/TO - CEP 77893000", "lat": -6.505097, "lon": -48.052201, "dist_anterior_km": 0.3585, "dist_proxima_km": 0.38110000000000005}, {"seq": 78, "codigo": "00410347", "pedido": "0114", "cliente": "SAPOS BAR", "endereco": "RU1 VICENTE BORGES S/NCENTRO DOS BORGESRIACHINHOTO - CENTRO DOS BORGES - RIACHINHO/TO - CEP 77893000", "lat": -6.508327, "lon": -48.05113, "dist_anterior_km": 0.38110000000000005, "dist_proxima_km": 0.039200000000000006}, {"seq": 79, "codigo": "00410330", "pedido": "0126", "cliente": "COMERCIAL OLIVEIRA01", "endereco": "RU1 VICENTE BORGES D S/NANANASRIACHINHOTO - ANANAS - RIACHINHO/TO - CEP 77893000", "lat": -6.508463, "lon": -48.051015, "dist_anterior_km": 0.039200000000000006, "dist_proxima_km": 0.15430000000000002}, {"seq": 80, "codigo": "00410327", "pedido": "0115", "cliente": "BAR E ADEGA 10 ANOS", "endereco": "RU1 VICENTE BORGES S S/NCENTRO DOS BORGESRIACHINHOTO - CENTRO DOS BORGES - RIACHINHO/TO - CEP 77893000", "lat": -6.508015, "lon": -48.050037, "dist_anterior_km": 0.15430000000000002, "dist_proxima_km": null}];
+const ORIGEM = {"lat": -7.22722092594843, "lon": -48.24978544427654};
+const TRACADO_IDA = [[-7.22693, -48.250414], [-7.189829, -48.23306], [-7.161878, -48.205528], [-7.130376, -48.19944], [-7.093243, -48.171055], [-7.068366, -48.119774], [-7.033154, -48.103699], [-7.000879, -48.097801], [-6.970005, -48.099888], [-6.953087, -48.091498], [-6.915281, -48.052834], [-6.883868, -47.994352], [-6.855532, -47.973518], [-6.839292, -47.946965], [-6.823872, -47.871265], [-6.823169, -47.820048], [-6.737125, -47.778172], [-6.711163, -47.757173], [-6.710355, -47.757339], [-6.709493, -47.756254], [-6.709152, -47.753882], [-6.708678, -47.753579], [-6.708769, -47.753241], [-6.708772, -47.75324], [-6.70813, -47.751608], [-6.708258, -47.749919], [-6.707682, -47.749531], [-6.707572, -47.749622], [-6.708211, -47.749933], [-6.707163, -47.747681], [-6.70771, -47.747234], [-6.707311, -47.746127], [-6.707103, -47.745202], [-6.706904, -47.743931], [-6.705849, -47.743584], [-6.704821, -47.743786], [-6.703969, -47.743053], [-6.706241, -47.754083], [-6.710917, -47.756537], [-6.709991, -47.778406], [-6.691357, -47.808711], [-6.694875, -47.828613], [-6.683517, -47.855638], [-6.64786, -47.874083], [-6.586213, -47.874218], [-6.56105, -47.855967], [-6.542423, -47.857242], [-6.515932, -47.867941], [-6.412311, -47.852093], [-6.411948, -47.8521], [-6.413019, -47.855913], [-6.391681, -47.864619], [-6.390196, -47.864572], [-6.389434, -47.864641], [-6.38945, -47.865022], [-6.389278, -47.865289], [-6.38909, -47.865579], [-6.388552, -47.864518], [-6.388598, -47.863739], [-6.389503, -47.863563], [-6.391505, -47.864061], [-6.390571, -47.863848], [-6.388975, -47.871762], [-6.407052, -47.906347], [-6.411448, -47.928134], [-6.408487, -47.939033], [-6.396774, -47.947779], [-6.401947, -47.956057], [-6.391781, -47.97336], [-6.385842, -48.03643], [-6.392005, -48.052689], [-6.382928, -48.063107], [-6.376925, -48.064959], [-6.372727, -48.069119], [-6.373404, -48.069624], [-6.373654, -48.06987], [-6.374455, -48.071963], [-6.374898, -48.072016], [-6.375124, -48.072625], [-6.375423, -48.072838], [-6.376569, -48.072683], [-6.376221, -48.071021], [-6.37841, -48.070817], [-6.375222, -48.069106], [-6.373908, -48.069452], [-6.373883, -48.069493], [-6.373396, -48.072101], [-6.370642, -48.071321], [-6.370558, -48.071417], [-6.369467, -48.072015], [-6.369168, -48.072274], [-6.368101, -48.0728], [-6.367283, -48.073619], [-6.366723, -48.074229], [-6.367091, -48.074653], [-6.367037, -48.075227], [-6.367694, -48.075634], [-6.365895, -48.07485], [-6.365313, -48.074846], [-6.361867, -48.073808], [-6.368463, -48.079051], [-6.36879, -48.080989], [-6.367257, -48.083171], [-6.375195, -48.072518], [-6.404023, -48.094544], [-6.404262, -48.094607], [-6.441787, -48.12788], [-6.445516, -48.136095], [-6.44213, -48.137664], [-6.440737, -48.138269], [-6.436298, -48.14233], [-6.399191, -48.153803], [-6.406949, -48.172372], [-6.441548, -48.170226], [-6.457136, -48.163161], [-6.433877, -48.120204], [-6.439564, -48.111349], [-6.470667, -48.100298], [-6.483023, -48.090524], [-6.494556, -48.076049], [-6.501967, -48.056767], [-6.500549, -48.061771], [-6.503492, -48.05372], [-6.50359, -48.053528], [-6.505123, -48.05219], [-6.50823, -48.051152], [-6.508453, -48.050981], [-6.507913, -48.050068]];
+const TRACADO_VOLTA = [[-6.507913, -48.050068], [-6.525712, -48.071827], [-6.542146, -48.078406], [-6.555685, -48.091361], [-6.602288, -48.075169], [-6.62814, -48.052102], [-6.649313, -48.022753], [-6.691535, -48.014823], [-6.731481, -47.992645], [-6.749947, -47.99201], [-6.775464, -47.971507], [-6.805949, -47.965383], [-6.828185, -47.976207], [-6.853798, -47.972691], [-6.883868, -47.994352], [-6.91504, -48.052516], [-6.953532, -48.091868], [-6.970005, -48.099888], [-7.000879, -48.097801], [-7.033154, -48.103699], [-7.068366, -48.119774], [-7.093243, -48.171055], [-7.130376, -48.19944], [-7.161314, -48.205745], [-7.189917, -48.233253], [-7.232451, -48.252836], [-7.22693, -48.250414]];
+const DATA_ISO = '2026-08-21';
+const ROTULO_ROTA = "RMB-6G43 - Motorista 730";
+const NUMERO_MOTORISTA = "730";
+const ROTA_ID = "RT001006";
+const VEICULO_ORIGINAL = "RMB-6G43";
+
+// Status de entrega marcado pelo motorista (Entregue / Devolucao / Voltar
+// depois-Fechado). Fica salvo em 2 lugares: localStorage (instantaneo,
+// funciona ate' sem internet no momento do clique) e no Firestore (nuvem,
+// pra sincronizar entre o celular do motorista e o painel do supervisor).
+// Escopado por dia (chave inclui DATA_ISO) para que a marcacao de hoje nao
+// apareca, por engano, numa rota de um dia futuro com o mesmo cliente.
+const CORES_STATUS = { '': '#1f4e78', entregue: '#1e7e34', devolucao: '#c00000', fechado: '#b8860b' };
+
+let paradasEfetivas = PARADAS;
+
+// Aplica um ajuste manual (feito pelo administrador) por cima da lista de
+// paradas original: oculta as removidas, reordena pela posicao escolhida
+// (codigo nao listado mantem a ordem relativa original, vai pro fim) e
+// renumera a sequencia de 1..N -- a numeracao mostrada ao motorista e' sempre
+// a "efetiva", nunca a original do PathFind quando ha ajuste.
+function aplicarAjustePartadas(paradas, ajuste) {
+  let lista = paradas.slice();
+  if (ajuste && ajuste.removidos && ajuste.removidos.length) {
+    const removidos = new Set(ajuste.removidos);
+    lista = lista.filter(p => !removidos.has(p.codigo));
+  }
+  if (ajuste && ajuste.ordem && ajuste.ordem.length) {
+    const posicao = new Map(ajuste.ordem.map((c, i) => [c, i]));
+    lista.sort((a, b) => {
+      const pa = posicao.has(a.codigo) ? posicao.get(a.codigo) : Infinity;
+      const pb = posicao.has(b.codigo) ? posicao.get(b.codigo) : Infinity;
+      if (pa !== pb) return pa - pb;
+      return a.seq - b.seq;
+    });
+  }
+  const mensagens = (ajuste && ajuste.mensagens) || {};
+  return lista.map((p, i) => Object.assign({}, p, { seq: i + 1, mensagem: mensagens[p.codigo] || null }));
+}
+
+let db = null;
+try {
+  firebase.initializeApp({"apiKey": "AIzaSyDZpcc1GgdbknHdkuI4dOx1myDR6PsLPic", "authDomain": "rotacertaog.firebaseapp.com", "projectId": "rotacertaog", "storageBucket": "rotacertaog.firebasestorage.app", "messagingSenderId": "1048075742585", "appId": "1:1048075742585:web:424f99f9a29fa0f23593a8"});
+  db = firebase.firestore();
+} catch (e) {
+  console.error('Firebase nao inicializou (marcacao vai funcionar so neste aparelho):', e);
+}
+
+// Registra, uma vez ao abrir a pagina, a localizacao atual do aparelho (se
+// o motorista permitir) -- so' um "instantaneo" de onde ele estava no
+// momento do acesso, nao rastreamento continuo. Roda em segundo plano e
+// falha em silencio (sem alert, sem travar nada) se o GPS nao estiver
+// disponivel, o motorista negar a permissao, ou o Firestore recusar a
+// escrita -- essa funcionalidade nunca deve impedir o uso normal da rota.
+function registrarLocalizacao() {
+  if (!db || !navigator.geolocation) return;
+  try {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      try {
+        const chave = String(NUMERO_MOTORISTA || ROTA_ID);
+        db.collection('localizacao_motoristas').doc(chave).set({
+          data: DATA_ISO,
+          rota_id: ROTA_ID,
+          rotulo: ROTULO_ROTA,
+          numero_motorista: NUMERO_MOTORISTA,
+          veiculo: VEICULO_ORIGINAL,
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          precisao_m: pos.coords.accuracy,
+          maps_url: 'https://www.google.com/maps?q=' + pos.coords.latitude + ',' + pos.coords.longitude,
+          atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(err) { console.error('Falha ao registrar localizacao:', err); });
+      } catch (e) { console.error('Falha ao registrar localizacao:', e); }
+    }, function(err) {
+      console.warn('Localizacao indisponivel ou nao autorizada:', err.message);
+    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 });
+  } catch (e) {
+    console.error('Geolocalizacao indisponivel neste navegador:', e);
+  }
+}
+registrarLocalizacao();
+
+function chaveStatus(codigo) {
+  return 'status_' + DATA_ISO + '_' + codigo;
+}
+function lerStatus(codigo) {
+  return localStorage.getItem(chaveStatus(codigo)) || '';
+}
+function salvarStatusRemoto(p, status) {
+  if (!db) return;
+  const ref = db.collection('status_entregas').doc(DATA_ISO + '_' + p.codigo);
+  if (status) {
+    ref.set({
+      data: DATA_ISO,
+      rotulo: ROTULO_ROTA,
+      codigo: p.codigo,
+      cliente: p.cliente,
+      seq: p.seq,
+      status: status,
+      atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.error('Falha ao sincronizar status:', err));
+  } else {
+    ref.delete().catch(err => console.error('Falha ao limpar status remoto:', err));
+  }
+}
+function iconeNumerado(numero, cor) {
+  cor = cor || '#1f4e78';
+  return L.divIcon({
+    className: 'icone-parada',
+    html: '<div style="background:' + cor + ';color:#fff;border-radius:50%;width:26px;height:26px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;' +
+          'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">' + numero + '</div>',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
+  });
+}
+
+function aplicarStatus(li, status, marker, numero, temMensagem) {
+  li.classList.remove('status-entregue', 'status-devolucao', 'status-fechado');
+  li.querySelectorAll('.status-btn').forEach(b => b.classList.remove('ativo'));
+  if (status) {
+    li.classList.add('status-' + status);
+    const btn = li.querySelector('.status-btn.' + status);
+    if (btn) btn.classList.add('ativo');
+  }
+  if (marker) {
+    const cor = status ? CORES_STATUS[status] : (temMensagem ? '#ff6d00' : CORES_STATUS['']);
+    marker.setIcon(iconeNumerado(numero, cor));
+  }
+}
+
+function iniciarPagina() {
+const listaEl = document.getElementById('listaParadas');
+const mapa = L.map('mapa', { preferCanvas: true });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  updateWhenZooming: false,
+  keepBuffer: 3,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(mapa);
+
+const iconeOrigem = L.divIcon({
+  className: 'icone-origem',
+  html: '<div style="background:#c00000;color:#fff;border-radius:50%;width:26px;height:26px;' +
+        'display:flex;align-items:center;justify-content:center;font-size:14px;' +
+        'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">&#128666;</div>',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13]
+});
+
+const pontos = [[ORIGEM.lat, ORIGEM.lon]];
+L.marker([ORIGEM.lat, ORIGEM.lon], { icon: iconeOrigem })
+  .bindPopup('<b>Saida do caminhao</b>')
+  .addTo(mapa);
+
+const referencias = {};  // codigo -> { li, marker }, usado pra aplicar o status vindo do Firestore
+
+paradasEfetivas.forEach(p => {
+  const li = document.createElement('li');
+  li.className = 'parada' + (p.mensagem ? ' tem-mensagem' : '');
+  const origemTxt = (p.seq === 1) ? 'saida' : 'parada anterior';
+  const chegadaTxt = 'de ' + origemTxt + ': ' + p.dist_anterior_km.toFixed(2) + ' km';
+  const proximaTxt = (p.dist_proxima_km === null) ? 'ultima parada'
+    : ('proxima: ' + p.dist_proxima_km.toFixed(2) + ' km');
+  const mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lon;
+  const mensagemHtml = p.mensagem ? '<div class="mensagem-admin">Aviso: ' + p.mensagem + '</div>' : '';
+  li.innerHTML =
+    '<div class="num">' + p.seq + '</div>' +
+    '<div class="info">' +
+      '<div class="codigo">Pedido ' + parseInt(p.pedido, 10) + ' &middot; ' + p.codigo + '</div>' +
+      '<div class="cliente">' + p.cliente + '</div>' +
+      '<div class="endereco">' + p.endereco + '</div>' +
+      mensagemHtml +
+      '<div class="meta">' + chegadaTxt + ' &middot; ' + proximaTxt + '</div>' +
+      '<div class="status-botoes">' +
+        '<div class="status-btn entregue" data-status="entregue">Entregue</div>' +
+        '<div class="status-btn devolucao" data-status="devolucao">Devolucao</div>' +
+        '<div class="status-btn fechado" data-status="fechado">Voltar depois/Fechado</div>' +
+      '</div>' +
+      '<a class="btn-maps" href="' + mapsUrl + '" target="_blank" rel="noopener">Abrir no Google Maps</a>' +
+    '</div>';
+  listaEl.appendChild(li);
+  pontos.push([p.lat, p.lon]);
+  const statusInicial = lerStatus(p.codigo);
+  const marker = L.marker([p.lat, p.lon], { icon: iconeNumerado(p.seq, CORES_STATUS[statusInicial]) })
+    .bindPopup('<b>' + p.seq + '. ' + p.codigo + ' - ' + p.cliente + '</b><br>' + p.endereco)
+    .addTo(mapa);
+  aplicarStatus(li, statusInicial, marker, p.seq, !!p.mensagem);
+  referencias[p.codigo] = { li, marker, mensagem: !!p.mensagem };
+  li.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const status = btn.dataset.status;
+      const novo = btn.classList.contains('ativo') ? '' : status;
+      if (novo) {
+        localStorage.setItem(chaveStatus(p.codigo), novo);
+      } else {
+        localStorage.removeItem(chaveStatus(p.codigo));
+      }
+      aplicarStatus(li, novo, marker, p.seq, !!p.mensagem);
+      salvarStatusRemoto(p, novo);
+    });
+  });
+});
+
+// Ao abrir a pagina, busca no Firestore o status mais recente de cada
+// parada (pode ter sido marcado de outro aparelho) e sobrescreve o que
+// veio do localStorage, que e' so' um cache instantaneo local.
+if (db) {
+  db.collection('status_entregas').where('data', '==', DATA_ISO).get().then(snapshot => {
+    snapshot.forEach(doc => {
+      const dados = doc.data();
+      const ref = referencias[dados.codigo];
+      if (ref && dados.status && dados.status !== lerStatus(dados.codigo)) {
+        localStorage.setItem(chaveStatus(dados.codigo), dados.status);
+        const seqNum = parseInt(ref.li.querySelector('.num').textContent, 10);
+        aplicarStatus(ref.li, dados.status, ref.marker, seqNum, ref.mensagem);
+      }
+    });
+  }).catch(err => console.error('Falha ao buscar status remoto:', err));
+}
+
+if (pontos.length > 1) {
+  // TRACADO_IDA/TRACADO_VOLTA vem do OSRM (segue as ruas de verdade). Se o
+  // servico falhou na hora de gerar a pagina, caimos para uma linha reta
+  // entre os pontos, so pra sempre ter algo desenhado no mapa.
+  const linhaIda = (TRACADO_IDA && TRACADO_IDA.length > 1) ? TRACADO_IDA : pontos;
+  const linhaVolta = (TRACADO_VOLTA && TRACADO_VOLTA.length > 1)
+    ? TRACADO_VOLTA
+    : [pontos[pontos.length - 1], [ORIGEM.lat, ORIGEM.lon]];
+  L.polyline(linhaIda, { color: '#1f4e78', weight: 4, opacity: 0.75 }).addTo(mapa);
+  L.polyline(linhaVolta, { color: '#c00000', weight: 4, opacity: 0.65, dashArray: '6 8' }).addTo(mapa);
+}
+if (pontos.length) {
+  mapa.fitBounds(pontos, { padding: [30, 30] });
+}
+}  // fim de iniciarPagina()
+
+// --- controle de acesso por senha (por motorista) ---------------------
+// Protecao simples: impede abertura casual do link. Nao e' seguranca forte
+// (o codigo roda todo no navegador, alguem tecnico poderia contornar), mas
+// evita que quem receba o link por engano veja dados do cliente. A senha
+// fica guardada no Firestore (colecao "motoristas"),
+// nunca no codigo desta pagina.
+// Antes de decidir a senha/rotulo, busca se ha algum ajuste manual salvo
+// pelo administrador pra essa rota+dia (troca de motorista/veiculo, ordem
+// ou paradas removidas). Se houver, ele manda: inclusive a senha exigida
+// passa a ser a do motorista definido no ajuste, nao a original do PathFind.
+function iniciarComAjuste(ajuste) {
+  paradasEfetivas = aplicarAjustePartadas(PARADAS, ajuste);
+  const numeroEfetivo = (ajuste && ajuste.motorista_numero) || NUMERO_MOTORISTA;
+  const placaEfetiva = (ajuste && ajuste.veiculo) || VEICULO_ORIGINAL;
+  if (ajuste) {
+    const rotuloEfetivo = numeroEfetivo
+      ? (placaEfetiva || 'Veiculo') + ' - Motorista ' + numeroEfetivo
+      : (placaEfetiva || 'Veiculo') + ' - Sem motorista definido';
+    document.title = rotuloEfetivo + ' - Rota de entrega';
+    const h1 = document.querySelector('header h1');
+    if (h1) h1.textContent = rotuloEfetivo;
+    const avisoEl = document.getElementById('avisoAjuste');
+    if (avisoEl) {
+      avisoEl.className = 'aviso-ajuste';
+      avisoEl.textContent = 'Esta rota foi ajustada manualmente pelo administrador.';
+    }
+  }
+
+  if (!numeroEfetivo) {
+    iniciarPagina();  // sem motorista definido (original nem ajustado): nao da pra proteger, abre direto
+    return;
+  }
+  const chaveDesbloqueio = 'desbloqueado_motorista_' + numeroEfetivo;
+  if (localStorage.getItem(chaveDesbloqueio) === 'sim') {
+    iniciarPagina();
+    return;
+  }
+  const form = document.getElementById('formSenha');
+  if (!form) { iniciarPagina(); return; }
+  document.body.classList.add('bloqueado');
+  const erroEl = document.getElementById('bloqueioErro');
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if (!db) {
+      erroEl.textContent = 'Sem conexao com o servidor de senhas. Confira sua internet e tente de novo.';
+      return;
+    }
+    const senhaDigitada = document.getElementById('campoSenha').value;
+    erroEl.textContent = 'Verificando...';
+    db.collection('motoristas').doc(numeroEfetivo).get().then(doc => {
+      if (doc.exists && doc.data().senha === senhaDigitada) {
+        localStorage.setItem(chaveDesbloqueio, 'sim');
+        document.body.classList.remove('bloqueado');
+        iniciarPagina();
+      } else {
+        erroEl.textContent = 'Senha incorreta.';
+      }
+    }).catch(err => {
+      erroEl.textContent = 'Erro ao verificar a senha. Confira sua internet.';
+      console.error(err);
+    });
+  });
+}
+
+if (db && ROTA_ID) {
+  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + ROTA_ID).get()
+    .then(doc => iniciarComAjuste(doc.exists ? doc.data() : null))
+    .catch(err => { console.error('Falha ao buscar ajuste manual:', err); iniciarComAjuste(null); });
+} else {
+  iniciarComAjuste(null);
+}
+</script>
+</body>
+</html>
