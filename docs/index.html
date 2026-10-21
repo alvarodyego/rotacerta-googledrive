@@ -126,20 +126,21 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 <header>
   <h1>Cargas otimizadas</h1>
   <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
-  <div class="sub">Atualizado em 20/10/2026 08:11</div>
+  <div class="sub">Atualizado em 21/10/2026 08:16</div>
 </header>
 <div class="filtro-data">
   <label for="seletorAno">Ver rotas de:</label>
   <select id="seletorAno" class="compacta"></select>
   <select id="seletorMes" class="compacta"></select>
-  <select id="seletorData"><option value="2026-10-19">19/10/2026 (hoje)</option></select>
+  <select id="seletorData"><option value="2026-10-20">20/10/2026 (hoje)</option></select>
   <a href="index.html">Ir para hoje</a>
 </div>
 <a class="link-painel" href="painel.html">Ver painel do supervisor (todas as rotas)</a><main>
   <ul class="lista-rotas">
-    <li><a href="rotas/RMB-6G42-Motorista-728.html">RMB-6G42 - Motorista 728 <small>21 paradas &middot; 35.7 km</small></a></li>
-    <li><a href="rotas/TVA-5A26-Motorista-729.html">TVA-5A26 - Motorista 729 <small>27 paradas &middot; 35.1 km</small></a></li>
-    <li><a href="rotas/RMB-6G45-Motorista-724.html">RMB-6G45 - Motorista 724 <small>26 paradas &middot; 21.4 km</small></a></li>
+    <li><a href="rotas/TVA-6H36-Motorista-720.html">TVA-6H36 - Motorista 720 <small>34 paradas &middot; 130.8 km</small></a></li>
+    <li><a href="rotas/RMB-6G42-Motorista-728.html">RMB-6G42 - Motorista 728 <small>28 paradas &middot; 33.7 km</small></a></li>
+    <li><a href="rotas/TVA-5A26-Motorista-729.html">TVA-5A26 - Motorista 729 <small>29 paradas &middot; 28.3 km</small></a></li>
+    <li><a href="rotas/TVA-4H02-Sem-motorista-definido.html">TVA-4H02 - Sem motorista definido <small>5 paradas &middot; 36.1 km</small></a></li>
   </ul>
 </main>
 <footer>Gerado automaticamente a partir do relatorio do dia.</footer>
@@ -192,12 +193,12 @@ fetch('historico/manifest.json').then(r => r.json()).then(dias => {
     if (diasDoMes.length) selDia.value = diasDoMes[0].data;
   }
 
-  const anoAtual = '2026-10-19'.slice(0, 4);
-  const mesAtual = '2026-10-19'.slice(5, 7);
+  const anoAtual = '2026-10-20'.slice(0, 4);
+  const mesAtual = '2026-10-20'.slice(5, 7);
   popularAnos(anoAtual);
   popularMeses(selAno.value, mesAtual);
   popularDias(selAno.value, selMes.value);
-  selDia.value = '2026-10-19';
+  selDia.value = '2026-10-20';
 
   function navegarParaDiaSelecionado() {
     if (selDia.value) window.location.href = 'historico/' + selDia.value + '/index.html';
