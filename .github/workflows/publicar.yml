@@ -2,10 +2,10 @@ name: Publicar rotas a partir do Google Drive
 
 on:
   schedule:
-    # 22h,01h,03h,10h,15h UTC = 19h,22h,00h,07h,12h (Araguaina; arquivo do dia chega 17-19h) -- antes: meia-noite e meio-dia em Araguaina/TO (UTC-3, sem
+    # 00h,03h,11h UTC = 21h, 00h e 08h em Araguaina (UTC-3, sem horario de verao).
     # horario de verao). O minuto :23 (e nao :00) e' de proposito: o GitHub
     # atrasa muito os disparos na hora cheia (medido: 3 a 5 h de atraso).
-    - cron: "23 22,1,3,10,15 * * *"
+    - cron: "23 0,3,11 * * *"
   workflow_dispatch: {}
 
 permissions:
