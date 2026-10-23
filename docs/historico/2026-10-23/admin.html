@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f4e78">
+<title>Administracao de senhas</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: var(--texto); background: #f4f6f8; -webkit-tap-highlight-color: transparent; animation: entrada 0.15s ease-out; }
+@keyframes entrada { from { opacity: 0; } to { opacity: 1; } }
+header { background: var(--azul); color: #fff; padding: 12px 16px; }
+header h1 { margin: 0; font-size: 1.1rem; }
+header .marca { font-size: 0.75rem; opacity: 0.9; margin-top: 3px; }
+header .sub { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+.filtro-data { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-data label { font-size: 0.85rem; }
+.filtro-data select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 160px; }
+.filtro-data select.compacta { flex: 0 1 100px; min-width: 90px; }
+.filtro-data a { font-size: 0.8rem; color: var(--azul); text-decoration: none; white-space: nowrap; }
+.filtro-motorista { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.filtro-motorista label { font-size: 0.85rem; }
+.filtro-motorista select { font-size: 1rem; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--borda); flex: 1; min-width: 200px; }
+.mapa-geral-details { background: #fff; border-bottom: 1px solid var(--borda); }
+.mapa-geral-details summary { padding: 12px 16px; font-size: 0.85rem; font-weight: bold; color: var(--azul); cursor: pointer; }
+.mapa-geral { width: 100%; height: 60vh; min-height: 400px; }
+.legenda-motoristas { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; font-size: 0.72rem; }
+.legenda-item { display: flex; align-items: center; gap: 5px; }
+.legenda-cor { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+.aviso-linha-reta { background: #fff3cd; color: #664d03; font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid #ffe69c; }
+.aviso-ajuste { background: var(--azul-claro); color: var(--azul); font-size: 0.75rem; padding: 6px 16px; border-bottom: 1px solid var(--borda); }
+.resumo { font-size: 0.72rem; background: var(--azul-claro); display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 12px; border-radius: 8px; margin-top: 4px; }
+.resumo > div { display: flex; flex-direction: column; }
+.resumo span { color: #555; }
+.resumo b { color: var(--azul); font-size: 0.8rem; }
+#mapa { width: 100%; height: 68vh; min-height: 460px; }
+main { max-width: 720px; margin: 0 auto; padding: 0 4px; }
+ol.paradas { list-style: none; margin: 0; padding: 8px; }
+.parada { display: flex; gap: 10px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.parada .num { background: var(--azul); color: #fff; border-radius: 50%; width: 26px; height: 26px; min-width: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; align-self: flex-start; }
+.parada .info { flex: 1; }
+.parada .codigo { font-size: 0.68rem; color: #888; font-weight: bold; }
+.parada .cliente { font-weight: bold; font-size: 0.85rem; }
+.parada .endereco { font-size: 0.72rem; color: #444; margin-top: 2px; }
+.parada .meta { font-size: 0.68rem; color: var(--azul); margin-top: 4px; }
+.parada .btn-maps { display: inline-block; margin-top: 8px; padding: 6px 12px; background: var(--azul); color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: bold; }
+.parada .btn-maps:visited { color: #fff; }
+.parada.status-entregue { border-left: 4px solid #1e7e34; }
+.parada.status-devolucao { border-left: 4px solid #c00000; }
+.parada.status-fechado { border-left: 4px solid #b8860b; }
+.parada.tem-mensagem { border: 2px solid #ff6d00; background: #fff8f0; }
+.mensagem-admin { background: #ff6d00; color: #fff; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: bold; margin-top: 6px; }
+.status-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.status-btn { flex: 1; min-width: 84px; padding: 6px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; background: #fff; cursor: pointer; text-align: center; }
+.status-btn.entregue { border: 1.5px solid #1e7e34; color: #1e7e34; }
+.status-btn.devolucao { border: 1.5px solid #c00000; color: #c00000; }
+.status-btn.fechado { border: 1.5px solid #b8860b; color: #b8860b; }
+.status-btn.entregue.ativo { background: #1e7e34; color: #fff; }
+.status-btn.devolucao.ativo { background: #c00000; color: #fff; }
+.status-btn.fechado.ativo { background: #b8860b; color: #fff; }
+footer { text-align: center; font-size: 0.72rem; color: #888; padding: 16px; }
+footer a { color: var(--azul); }
+ul.lista-rotas { list-style: none; margin: 0; padding: 12px; max-width: 480px; margin: 0 auto; }
+ul.lista-rotas li { margin-bottom: 10px; }
+ul.lista-rotas a { display: block; background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; text-decoration: none; color: var(--texto); font-weight: bold; }
+ul.lista-rotas a small { display: block; font-weight: normal; color: #666; margin-top: 4px; }
+.link-painel { display: block; text-align: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--borda); font-size: 0.85rem; }
+.painel-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 10px; padding: 12px; }
+.painel-rota h2 { margin: 0 0 8px 0; font-size: 0.95rem; }
+.painel-contagem { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.72rem; font-weight: bold; margin-bottom: 8px; }
+.painel-contagem .c-entregue { color: #1e7e34; }
+.painel-contagem .c-devolucao { color: #c00000; }
+.painel-contagem .c-fechado { color: #b8860b; }
+.painel-contagem .c-pendente { color: #888; }
+.painel-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 0.75rem; padding: 5px 0; border-top: 1px solid #f0f0f0; }
+.painel-linha .p-status { font-weight: bold; white-space: nowrap; }
+.painel-linha.status-entregue .p-status { color: #1e7e34; }
+.painel-linha.status-devolucao .p-status { color: #c00000; }
+.painel-linha.status-fechado .p-status { color: #b8860b; }
+.painel-linha.status-pendente .p-status { color: #bbb; }
+.btn-aviso { padding: 3px 8px; border-radius: 5px; border: 1.5px solid #ff6d00; color: #ff6d00; background: #fff; font-size: 0.66rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.painel-atualizado { text-align: center; font-size: 0.7rem; color: #888; padding: 8px; }
+.bloqueio { display: none; position: fixed; inset: 0; background: var(--azul); color: #fff; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+body.bloqueado .bloqueio { display: flex; }
+body.bloqueado > *:not(.bloqueio) { display: none !important; }
+.bloqueio-caixa { max-width: 320px; width: 100%; text-align: center; }
+.bloqueio-caixa h2 { margin: 0 0 4px 0; font-size: 1.1rem; }
+.bloqueio-caixa p { font-size: 0.8rem; opacity: 0.85; margin: 0 0 16px 0; }
+.bloqueio-caixa input { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
+.bloqueio-caixa button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fff; color: var(--azul); font-weight: bold; font-size: 1rem; cursor: pointer; }
+.bloqueio-erro { color: #ffd6d6; font-size: 0.78rem; margin-top: 10px; min-height: 1em; }
+.admin-linha { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 8px 10px; }
+.admin-linha span { min-width: 40px; font-weight: bold; font-size: 0.85rem; }
+.admin-linha input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.admin-linha button { padding: 8px 12px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.admin-topo { display: flex; gap: 8px; padding: 10px; flex-wrap: wrap; }
+.admin-topo button { padding: 10px 14px; border-radius: 6px; border: none; background: var(--azul); color: #fff; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+.admin-msg { text-align: center; font-size: 0.8rem; padding: 8px; min-height: 1.2em; }
+.secao-titulo { font-size: 1rem; margin: 18px 12px 6px 12px; color: var(--azul); }
+.ajuste-rota { background: #fff; border: 1px solid var(--borda); border-radius: 8px; margin: 0 10px 10px 10px; padding: 10px 12px; }
+.ajuste-rota summary { font-weight: bold; cursor: pointer; }
+.ajuste-rota summary small { font-weight: normal; color: #666; }
+.ajuste-campos { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.ajuste-campo { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.ajuste-campo select, .ajuste-campo input[type=text] { padding: 8px; border-radius: 6px; border: 1px solid var(--borda); font-size: 0.9rem; }
+.ajuste-paradas { max-height: 320px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 6px; margin-bottom: 10px; }
+.ajuste-parada { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid #f0f0f0; }
+.ajuste-parada:last-child { border-bottom: none; }
+.ajuste-parada { flex-wrap: wrap; }
+.ajuste-parada .ap-nome { flex: 1; min-width: 140px; }
+.ajuste-parada .ap-pos { width: 52px; padding: 5px; border-radius: 5px; border: 1px solid var(--borda); text-align: center; }
+.ajuste-parada .ap-mensagem { flex: 1 1 100%; padding: 6px 8px; border-radius: 5px; border: 1px solid var(--borda); font-size: 0.78rem; margin-top: 4px; }
+.ajuste-parada.ap-excluida { opacity: 0.5; text-decoration: line-through; }
+.ajuste-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.ajuste-botoes button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 0.78rem; font-weight: bold; cursor: pointer; }
+.ajuste-botoes .btn-salvar { background: var(--azul); color: #fff; }
+.ajuste-botoes .btn-limpar { background: #fff; border: 1.5px solid #c00000 !important; color: #c00000; }
+.ajuste-status { font-size: 0.75rem; margin-top: 6px; min-height: 1.1em; }
+.tag-ajustada { display: inline-block; background: var(--azul); color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.tag-mensagem { display: inline-block; background: #ff6d00; color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body class="bloqueado">
+<div class="bloqueio"><div class="bloqueio-caixa">
+  <h2>Administracao</h2>
+  <p>Digite a senha administrativa pra continuar.</p>
+  <form id="formSenhaAdmin">
+    <input type="password" id="campoSenhaAdmin" placeholder="Senha administrativa" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+  </form>
+  <div class="bloqueio-erro" id="bloqueioErroAdmin"></div>
+</div></div>
+<header>
+  <h1>Administracao de senhas</h1>
+  <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
+</header>
+<div class="filtro-data">
+  <label for="seletorAno">Ver rotas de:</label>
+  <select id="seletorAno" class="compacta"></select>
+  <select id="seletorMes" class="compacta"></select>
+  <select id="seletorData"><option value="2026-10-23">23/10/2026 (hoje)</option></select>
+  <a href="../../admin.html">Ir para hoje</a>
+</div>
+<div class="filtro-motorista">
+  <label for="seletorMotorista">Motorista:</label>
+  <select id="seletorMotorista"><option value="">Todos</option></select>
+</div>
+<details class="mapa-geral-details" id="detalhesMapaGeral">
+  <summary>Ver mapa de todas as entregas de hoje</summary>
+  <div id="mapaGeral" class="mapa-geral"></div>
+  <div id="legendaMotoristas" class="legenda-motoristas"></div>
+</details>
+<main>
+  <h2 class="secao-titulo">Ajustar rotas de hoje</h2>
+  <p style="font-size:0.78rem; color:#666; margin: 0 12px 10px 12px;">
+    Corrija motorista, veiculo, ordem de visita ou tire uma parada de uma rota
+    de hoje sem esperar um novo arquivo do PathFind. O km mostrado ao
+    motorista continua sendo o original; a pagina dele so' avisa que a rota
+    foi ajustada manualmente.
+  </p>
+  <div id="listaAjustes"></div>
+
+  <h2 class="secao-titulo">Senhas dos motoristas</h2>
+  <div class="admin-topo">
+    <button id="btnGerarPadrao">Gerar senha padrao pra todo mundo</button>
+  </div>
+  <div class="admin-msg" id="adminMsg"></div>
+  <div id="listaMotoristas"></div>
+  <div class="admin-linha" style="margin-top:16px;">
+    <span>Admin</span>
+    <input type="text" id="novaSenhaAdmin" placeholder="Nova senha administrativa">
+    <button id="btnSalvarAdmin">Salvar</button>
+  </div>
+</main>
+<footer><a href="index.html">Ver lista de rotas</a></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const NUMERO_MIN = 720;
+const NUMERO_MAX = 731;
+const DATA_ISO = '2026-10-23';
+const ROTAS_HOJE = [{"id": "RT001002", "rotulo": "RMB-6G43 - Motorista 730", "veiculo": "RMB-6G43", "motorista_numero": "730", "paradas": [{"seq": 1, "codigo": "01180160", "cliente": "RESTAURANTE CONVEN01", "lat": -7.512806, "lon": -48.3934}, {"seq": 2, "codigo": "01180041", "cliente": "REST 3 IRMAOS", "lat": -7.513623, "lon": -48.393971}, {"seq": 3, "codigo": "01180177", "cliente": "BAR E ADEGA FL", "lat": -7.625948, "lon": -48.423712}, {"seq": 4, "codigo": "01180206", "cliente": "ACOUGUE MARRUA", "lat": -7.62776, "lon": -48.425066}, {"seq": 5, "codigo": "00030212", "cliente": "O TOCA DA ONCA", "lat": -7.628591, "lon": -48.426211}, {"seq": 6, "codigo": "01180176", "cliente": "J B BEBIDAS", "lat": -7.628887, "lon": -48.4264}, {"seq": 7, "codigo": "01180136", "cliente": "ESPETINHO DO DITOR", "lat": -7.630524, "lon": -48.424999}, {"seq": 8, "codigo": "01180019", "cliente": "BAR DO ABELHA", "lat": -7.631503, "lon": -48.423911}, {"seq": 9, "codigo": "01180187", "cliente": "MARINAS KIOSKE    01", "lat": -7.632881, "lon": -48.422093}, {"seq": 10, "codigo": "01180098", "cliente": "CASA DE CARNE MOTA", "lat": -7.632743, "lon": -48.420652}, {"seq": 11, "codigo": "01180018", "cliente": "BAR DO DELFINO", "lat": -7.632941, "lon": -48.419794}, {"seq": 12, "codigo": "01180204", "cliente": "ADEGA POPULAR", "lat": -7.630823, "lon": -48.420626}, {"seq": 13, "codigo": "01180141", "cliente": "CONVENIENCIA CENTRAL", "lat": -7.634054, "lon": -48.422707}, {"seq": 14, "codigo": "01180167", "cliente": "SUPER TREVO", "lat": -7.633717, "lon": -48.423885}, {"seq": 15, "codigo": "01180148", "cliente": "ESQUINA DO SABOR", "lat": -7.636391, "lon": -48.426888}, {"seq": 16, "codigo": "01180199", "cliente": "REAL BEBIDAS MERCEAR", "lat": -7.637934, "lon": -48.420213}, {"seq": 17, "codigo": "01180172", "cliente": "IMPERIOS BAR", "lat": -7.638195, "lon": -48.418553}, {"seq": 18, "codigo": "01180188", "cliente": "BAR E ADEGA A.E", "lat": -7.643881, "lon": -48.426436}]}, {"id": "RT001003", "rotulo": "TVA-5A26 - Motorista 729", "veiculo": "TVA-5A26", "motorista_numero": "729", "paradas": [{"seq": 1, "codigo": "01002016", "cliente": "SUPER BOX REGIS", "lat": -7.22888, "lon": -47.929348}, {"seq": 2, "codigo": "01030037", "cliente": "BAR DO TUCO", "lat": -7.211764, "lon": -47.901869}, {"seq": 3, "codigo": "01030057", "cliente": "LANCHONETE BORRACHAR", "lat": -7.211898, "lon": -47.901393}, {"seq": 4, "codigo": "01030129", "cliente": "PETISCO BAR       01", "lat": -7.210788, "lon": -47.901772}, {"seq": 5, "codigo": "01030117", "cliente": "BAR DO MARANHAO", "lat": -7.210198, "lon": -47.900551}, {"seq": 6, "codigo": "01030004", "cliente": "BAR DO DIM", "lat": -7.210777, "lon": -47.899699}, {"seq": 7, "codigo": "01030028", "cliente": "TABAJARAS BAR", "lat": -7.191739, "lon": -47.786316}, {"seq": 8, "codigo": "01030008", "cliente": "COMER VALADARES", "lat": -7.192575, "lon": -47.781778}, {"seq": 9, "codigo": "01030149", "cliente": "GELO SILVA COMERCIO", "lat": -7.192975, "lon": -47.777378}, {"seq": 10, "codigo": "01030132", "cliente": "CHEGA PRA CA", "lat": -7.19413, "lon": -47.775847}, {"seq": 11, "codigo": "01030108", "cliente": "ADEGAO DO BOY", "lat": -7.194447, "lon": -47.772813}, {"seq": 12, "codigo": "01030137", "cliente": "BAR DO CICERO     02", "lat": -7.195123, "lon": -47.769151}, {"seq": 13, "codigo": "01030146", "cliente": "KING BURGUER", "lat": -7.201261, "lon": -47.761998}, {"seq": 14, "codigo": "01030003", "cliente": "MERCEARIA BEZERRA", "lat": -7.201479, "lon": -47.761653}, {"seq": 15, "codigo": "01030060", "cliente": "BAR REST SABOR LAGO", "lat": -7.201383, "lon": -47.759697}, {"seq": 16, "codigo": "01030128", "cliente": "GOLD BAR          01", "lat": -7.201298, "lon": -47.759731}, {"seq": 17, "codigo": "01030125", "cliente": "REST PORTAL DO LAGO", "lat": -7.202411, "lon": -47.758298}, {"seq": 18, "codigo": "01030017", "cliente": "MERCADINHO JJ", "lat": -7.203636, "lon": -47.758495}, {"seq": 19, "codigo": "01030150", "cliente": "RESTAURANTE DALAI", "lat": -7.204272, "lon": -47.755948}, {"seq": 20, "codigo": "01030133", "cliente": "ESQUINA BAR       01", "lat": -7.207193, "lon": -47.754633}, {"seq": 21, "codigo": "01030140", "cliente": "MERCEARIA FM", "lat": -7.207916, "lon": -47.75441}, {"seq": 22, "codigo": "01030139", "cliente": "BAR DA GENEVRA", "lat": -7.205023, "lon": -47.760175}, {"seq": 23, "codigo": "01030014", "cliente": "VODKA BAR", "lat": -7.204731, "lon": -47.760031}, {"seq": 24, "codigo": "01030131", "cliente": "BAR DA SIMONE     01", "lat": -7.205906, "lon": -47.761536}, {"seq": 25, "codigo": "01030143", "cliente": "BAR DA PEDRNA", "lat": -7.204111, "lon": -47.764806}, {"seq": 26, "codigo": "01030103", "cliente": "VIVEIROS BAR", "lat": -7.205496, "lon": -47.764053}, {"seq": 27, "codigo": "01030135", "cliente": "MERCADINHO JA", "lat": -7.190241, "lon": -47.775566}, {"seq": 28, "codigo": "01080019", "cliente": "BAR DOIS IRMAOS", "lat": -7.472165, "lon": -47.747012}, {"seq": 29, "codigo": "01080125", "cliente": "COM SANTA LUZIA", "lat": -7.482538, "lon": -47.859971}, {"seq": 30, "codigo": "01080120", "cliente": "BEER PARADA OBRIGATO", "lat": -7.483035, "lon": -47.860575}, {"seq": 31, "codigo": "01080111", "cliente": "SUPER ROCHA       02", "lat": -7.483758, "lon": -47.861207}, {"seq": 32, "codigo": "01080117", "cliente": "BAR E DORMITORIO AM", "lat": -7.484005, "lon": -47.861101}, {"seq": 33, "codigo": "01080094", "cliente": "CONVENIENCIA JM", "lat": -7.484091, "lon": -47.861317}, {"seq": 34, "codigo": "01080033", "cliente": "SKINAO DIST BEBIDAS", "lat": -7.486638, "lon": -47.861565}, {"seq": 35, "codigo": "01080100", "cliente": "BAR ESPACO LIVRE  02", "lat": -7.382622, "lon": -47.594536}, {"seq": 36, "codigo": "01080121", "cliente": "CONV POSTO FILADELFI", "lat": -7.339423, "lon": -47.512466}, {"seq": 37, "codigo": "01080010", "cliente": "MERCEARIA AGUIAS", "lat": -7.34026, "lon": -47.505124}, {"seq": 38, "codigo": "01080077", "cliente": "BAR DO JARLEI", "lat": -7.342834, "lon": -47.502191}, {"seq": 39, "codigo": "01080124", "cliente": "CASA DE CARE JL", "lat": -7.337971, "lon": -47.503593}, {"seq": 40, "codigo": "01080002", "cliente": "MERCADINHO D FAMILIA", "lat": -7.339477, "lon": -47.500594}, {"seq": 41, "codigo": "01080007", "cliente": "SUPERMERCADO LC", "lat": -7.340402, "lon": -47.497947}, {"seq": 42, "codigo": "01080110", "cliente": "DISTRIBUIDOR TERRACO", "lat": -7.340411, "lon": -47.497898}, {"seq": 43, "codigo": "01080114", "cliente": "BARRACA NORONHA", "lat": -7.337536, "lon": -47.497692}, {"seq": 44, "codigo": "01080088", "cliente": "BAR DO BAIANO     01", "lat": -7.335596, "lon": -47.500548}, {"seq": 45, "codigo": "01080112", "cliente": "ZERO GRAU         01", "lat": -7.337531, "lon": -47.492228}, {"seq": 46, "codigo": "01080031", "cliente": "MERCEARIA FILADELFIA", "lat": -7.336279, "lon": -47.490805}, {"seq": 47, "codigo": "01080020", "cliente": "BAR DO FRANCIEL", "lat": -7.339791, "lon": -47.488586}, {"seq": 48, "codigo": "01080041", "cliente": "LANCH DO RIO", "lat": -7.339052, "lon": -47.483893}, {"seq": 49, "codigo": "01080022", "cliente": "LANCHONETE EXCLUSIVO", "lat": -7.339009, "lon": -47.483744}, {"seq": 50, "codigo": "01080102", "cliente": "LANCHONETE FILADELFI", "lat": -7.338817, "lon": -47.483822}, {"seq": 51, "codigo": "01080096", "cliente": "BERE RESTAURANTE", "lat": -7.340701, "lon": -47.483711}]}, {"id": "RT001004", "rotulo": "RMB-6G40 - Motorista 721", "veiculo": "RMB-6G40", "motorista_numero": "721", "paradas": [{"seq": 1, "codigo": "01002512", "cliente": "SILVANIA BAR E REST", "lat": -7.186459, "lon": -48.340497}, {"seq": 2, "codigo": "01002587", "cliente": "BAR DA MAMA", "lat": -7.185686, "lon": -48.342726}, {"seq": 3, "codigo": "01060072", "cliente": "PAO NOSSO", "lat": -7.041905, "lon": -48.393488}, {"seq": 4, "codigo": "01060004", "cliente": "MINE MERCAD ARAGUAIA", "lat": -7.038426, "lon": -48.394445}, {"seq": 5, "codigo": "01060016", "cliente": "BAR SANTO ANTONIO", "lat": -7.03735, "lon": -48.394431}, {"seq": 6, "codigo": "01060008", "cliente": "ESPETINHO DO GORDINH", "lat": -7.037139, "lon": -48.394835}, {"seq": 7, "codigo": "01060028", "cliente": "LAVATO ALTO ESTILO", "lat": -7.037148, "lon": -48.396446}, {"seq": 8, "codigo": "01060033", "cliente": "ADEGA DO AUDIR", "lat": -7.035517, "lon": -48.395315}, {"seq": 9, "codigo": "01060069", "cliente": "CONV PONTO CERTO", "lat": -7.034325, "lon": -48.395408}, {"seq": 10, "codigo": "01060059", "cliente": "MECERARIA TOCANTINS", "lat": -7.034633, "lon": -48.395576}, {"seq": 11, "codigo": "01020107", "cliente": "CABANA DO ESPETINHO", "lat": -6.85067, "lon": -48.517886}, {"seq": 12, "codigo": "01020125", "cliente": "BAR CASTRO", "lat": -6.849973, "lon": -48.518171}, {"seq": 13, "codigo": "01020102", "cliente": "ADEGA LEAL", "lat": -6.847101, "lon": -48.517833}, {"seq": 14, "codigo": "01020115", "cliente": "BAR BOA IDEIA     01", "lat": -6.84598, "lon": -48.518563}, {"seq": 15, "codigo": "01020018", "cliente": "BAR DO ZE PIRRITA", "lat": -6.846171, "lon": -48.51754}, {"seq": 16, "codigo": "01020027", "cliente": "BAR DA ALDEYDE", "lat": -6.845891, "lon": -48.51983}, {"seq": 17, "codigo": "01020065", "cliente": "PADARIA RENASCER", "lat": -6.845806, "lon": -48.519825}, {"seq": 18, "codigo": "01020014", "cliente": "PEIX SAO RAIMUNDO", "lat": -6.586327, "lon": -48.644545}, {"seq": 19, "codigo": "01020114", "cliente": "BAR DO BEITA", "lat": -6.586331, "lon": -48.644795}, {"seq": 20, "codigo": "01020058", "cliente": "LANCHE E ADEGA AEF", "lat": -6.586386, "lon": -48.644859}, {"seq": 21, "codigo": "01020103", "cliente": "ADEGA E MERC PRAIANO", "lat": -6.582097, "lon": -48.643367}, {"seq": 22, "codigo": "01020051", "cliente": "ADEGA DO ARAUJO", "lat": -6.58089, "lon": -48.644356}, {"seq": 23, "codigo": "01020112", "cliente": "DELICIAS DA BRUNA", "lat": -6.580898, "lon": -48.644576}, {"seq": 24, "codigo": "01020062", "cliente": "MERC RIO LONTRA", "lat": -6.579331, "lon": -48.641857}, {"seq": 25, "codigo": "01020109", "cliente": "ADEGA 3F", "lat": -6.577784, "lon": -48.640219}, {"seq": 26, "codigo": "01020061", "cliente": "MERCEARIA ARAGUAIA", "lat": -6.572725, "lon": -48.640386}, {"seq": 27, "codigo": "01150203", "cliente": "MERCEARIA CENTRAL", "lat": -6.42056, "lon": -48.536668}, {"seq": 28, "codigo": "01010008", "cliente": "BAR DA BELINHA", "lat": -7.172306, "lon": -48.526016}, {"seq": 29, "codigo": "01010017", "cliente": "ADEGA IMP DA BEBIDA", "lat": -7.16709, "lon": -48.527075}, {"seq": 30, "codigo": "01010050", "cliente": "BAR DO NEGUIN", "lat": -7.166843, "lon": -48.52626}, {"seq": 31, "codigo": "01010002", "cliente": "COMER LH", "lat": -7.166551, "lon": -48.524861}, {"seq": 32, "codigo": "01010048", "cliente": "ADEGA FREITAS", "lat": -7.166315, "lon": -48.524421}, {"seq": 33, "codigo": "01010049", "cliente": "BAR ALTO DA CORUJA", "lat": -7.16353, "lon": -48.528926}, {"seq": 34, "codigo": "01010047", "cliente": "ALTO DA CORUJA BAR", "lat": -7.163522, "lon": -48.52892}, {"seq": 35, "codigo": "01010026", "cliente": "BAR JR", "lat": -7.170153, "lon": -48.532933}, {"seq": 36, "codigo": "01100031", "cliente": "REST QUERO MAIS", "lat": -7.146306, "lon": -48.606323}, {"seq": 37, "codigo": "01100010", "cliente": "BAR DO BELCHIOR", "lat": -7.145931, "lon": -48.609348}, {"seq": 38, "codigo": "01130036", "cliente": "COMER BEIRA RIO", "lat": -7.148779, "lon": -48.690457}, {"seq": 39, "codigo": "01010032", "cliente": "PESTICARIO B TEMPERO", "lat": -7.150986, "lon": -48.692405}, {"seq": 40, "codigo": "01130056", "cliente": "PIZ DO GAUCHO", "lat": -7.152715, "lon": -48.694033}, {"seq": 41, "codigo": "01130041", "cliente": "LANCHE BOM JESUS", "lat": -7.1531, "lon": -48.694535}, {"seq": 42, "codigo": "01130106", "cliente": "BOLA NA REDE", "lat": -7.153263, "lon": -48.6937}, {"seq": 43, "codigo": "01002940", "cliente": "BAR DA CRIS", "lat": -7.15381, "lon": -48.693053}, {"seq": 44, "codigo": "01130087", "cliente": "A BODEGA CONV E BEBI", "lat": -7.153859, "lon": -48.693088}, {"seq": 45, "codigo": "01130125", "cliente": "FRANCIENE DISTRIBUID", "lat": -7.153486, "lon": -48.695708}, {"seq": 46, "codigo": "01130118", "cliente": "FRANCIS CONVENIENCIA", "lat": -7.153675, "lon": -48.696}, {"seq": 47, "codigo": "01130048", "cliente": "COMER NOVA ESPERANCA", "lat": -7.155281, "lon": -48.690373}, {"seq": 48, "codigo": "01130073", "cliente": "BAR VIRACOPOS", "lat": -7.153538, "lon": -48.69012}, {"seq": 49, "codigo": "01130110", "cliente": "VIRA COPOS", "lat": -7.153538, "lon": -48.69012}, {"seq": 50, "codigo": "01130100", "cliente": "ZERO HORA", "lat": -7.154828, "lon": -48.688348}, {"seq": 51, "codigo": "01130022", "cliente": "SQUINA BAR", "lat": -7.152945, "lon": -48.687031}, {"seq": 52, "codigo": "01002103", "cliente": "ADEGA MOURA", "lat": -7.151691, "lon": -48.690116}, {"seq": 53, "codigo": "01130124", "cliente": "COMERCIAL RIO PRETO", "lat": -7.157501, "lon": -48.689028}, {"seq": 54, "codigo": "01130101", "cliente": "COMERCIAL JG", "lat": -7.15751, "lon": -48.688913}, {"seq": 55, "codigo": "01130062", "cliente": "BAR E MERC MOREIRA", "lat": -7.159583, "lon": -48.690265}, {"seq": 56, "codigo": "01130021", "cliente": "MERCEARIA SAMAMBAIA", "lat": -7.14965, "lon": -48.70137}, {"seq": 57, "codigo": "01130033", "cliente": "RESENHAS BAR 00", "lat": -7.148526, "lon": -48.70381}]}, {"id": "RT001005", "rotulo": "RMB-6G44 - Motorista 725", "veiculo": "RMB-6G44", "motorista_numero": "725", "paradas": [{"seq": 1, "codigo": "01070032", "cliente": "LANCH VITORIA 01", "lat": -6.711124, "lon": -47.757238}, {"seq": 2, "codigo": "00440390", "cliente": "PANTANAL HOTEL E RES", "lat": -6.709342, "lon": -47.756483}, {"seq": 3, "codigo": "01070008", "cliente": "BAR DO JOAO 03", "lat": -6.709541, "lon": -47.754901}, {"seq": 4, "codigo": "01070001", "cliente": "CASA DE CARNE MERCES", "lat": -6.709192, "lon": -47.753908}, {"seq": 5, "codigo": "01070009", "cliente": "CARLINHO PONTO COM", "lat": -6.708823, "lon": -47.753503}, {"seq": 6, "codigo": "01070057", "cliente": "NA BRAZZA", "lat": -6.708786, "lon": -47.753306}, {"seq": 7, "codigo": "01070005", "cliente": "SUPERMECADO CENTRAL", "lat": -6.710268, "lon": -47.750996}, {"seq": 8, "codigo": "00440400", "cliente": "ADEGA L MAIS P MENOS", "lat": -6.708753, "lon": -47.750293}, {"seq": 9, "codigo": "01070017", "cliente": "ESPETINHO MIX", "lat": -6.708338, "lon": -47.750073}, {"seq": 10, "codigo": "01070034", "cliente": "ESPETO MEDRADO", "lat": -6.708287, "lon": -47.749914}, {"seq": 11, "codigo": "01070059", "cliente": "IDEL SUPERMERCADO", "lat": -6.708155, "lon": -47.750032}, {"seq": 12, "codigo": "00440385", "cliente": "DIST DO JOAO DA PRAT", "lat": -6.707151, "lon": -47.747685}, {"seq": 13, "codigo": "00440402", "cliente": "ADEGA GELA GUELA", "lat": -6.707116, "lon": -47.7452}, {"seq": 14, "codigo": "00440382", "cliente": "MANGUEIRAOS BAR", "lat": -6.705839, "lon": -47.743616}, {"seq": 15, "codigo": "00440384", "cliente": "PEIXARIA ALTO BONITO", "lat": -6.703977, "lon": -47.74302}, {"seq": 16, "codigo": "00440407", "cliente": "RODRIGUES BAR", "lat": -6.702468, "lon": -47.743555}, {"seq": 17, "codigo": "01070029", "cliente": "DIST EISENBAHN", "lat": -6.702426, "lon": -47.745886}, {"seq": 18, "codigo": "00440379", "cliente": "CANTINHO BR", "lat": -6.706214, "lon": -47.754126}, {"seq": 19, "codigo": "00050229", "cliente": "BAR DO ZEZIM      01", "lat": -6.411964, "lon": -47.85215}, {"seq": 20, "codigo": "00050247", "cliente": "BIG LANCHES", "lat": -6.39149, "lon": -47.864572}, {"seq": 21, "codigo": "00050261", "cliente": "ADEGA DO MAX      01", "lat": -6.390169, "lon": -47.864567}, {"seq": 22, "codigo": "00050252", "cliente": "SUPERMECADO LILI II", "lat": -6.389232, "lon": -47.865283}, {"seq": 23, "codigo": "00050231", "cliente": "COMERCIAL SANTOS  01", "lat": -6.389111, "lon": -47.865892}, {"seq": 24, "codigo": "00050260", "cliente": "AREA DE LAZER D E FI", "lat": -6.388171, "lon": -47.867953}, {"seq": 25, "codigo": "00050242", "cliente": "DIST PASSA LA", "lat": -6.390481, "lon": -47.867575}, {"seq": 26, "codigo": "00050256", "cliente": "BR CONVENIENCIA   01", "lat": -6.391485, "lon": -47.8643}, {"seq": 27, "codigo": "00050265", "cliente": "MERCADINHO MEGA BOX", "lat": -6.389455, "lon": -47.863556}, {"seq": 28, "codigo": "00050263", "cliente": "ELITE BIKE", "lat": -6.388576, "lon": -47.863731}, {"seq": 29, "codigo": "00040179", "cliente": "ADEGA DO EDIMILSON", "lat": -6.372758, "lon": -48.069069}, {"seq": 30, "codigo": "00040206", "cliente": "ADEGA DO GORDIM   01", "lat": -6.373427, "lon": -48.069598}, {"seq": 31, "codigo": "00040239", "cliente": "POINT BEER DIST BEBI", "lat": -6.372077, "lon": -48.069307}, {"seq": 32, "codigo": "00040238", "cliente": "ADEGA SOARES      01", "lat": -6.370643, "lon": -48.071322}, {"seq": 33, "codigo": "00040177", "cliente": "CASA DA BEBIDA    01", "lat": -6.370328, "lon": -48.072184}, {"seq": 34, "codigo": "00040252", "cliente": "CONVENIENCIA MC", "lat": -6.373238, "lon": -48.073816}, {"seq": 35, "codigo": "00040230", "cliente": "MVJ TABACARIA", "lat": -6.373424, "lon": -48.073511}, {"seq": 36, "codigo": "00040255", "cliente": "DISTRIBUIDORA D DUDU", "lat": -6.374908, "lon": -48.07201}, {"seq": 37, "codigo": "00040228", "cliente": "REST LANCHE ANANAS", "lat": -6.37468, "lon": -48.070996}, {"seq": 38, "codigo": "00040237", "cliente": "HOUSE M DIST BEBIDAS", "lat": -6.375212, "lon": -48.069099}, {"seq": 39, "codigo": "00040186", "cliente": "COMERCIAL PEREIRA 01", "lat": -6.37625, "lon": -48.071041}, {"seq": 40, "codigo": "00040222", "cliente": "DOM BARBER", "lat": -6.376588, "lon": -48.072703}, {"seq": 41, "codigo": "00040209", "cliente": "BAR E PIZZARIA ARAUJ", "lat": -6.36872, "lon": -48.081053}, {"seq": 42, "codigo": "00040180", "cliente": "ADEGA DO BAXIM", "lat": -6.367766, "lon": -48.075603}, {"seq": 43, "codigo": "00040168", "cliente": "IDEAL VARIEDADE", "lat": -6.367102, "lon": -48.074327}, {"seq": 44, "codigo": "00410325", "cliente": "BAR DO QUERIDO", "lat": -6.360494, "lon": -48.072451}, {"seq": 45, "codigo": "00040212", "cliente": "BAR TRES IRMAES 02", "lat": -6.366706, "lon": -48.066396}, {"seq": 46, "codigo": "00410331", "cliente": "BAR E REST E DORM JP", "lat": -6.445203, "lon": -48.136068}, {"seq": 47, "codigo": "00410332", "cliente": "DIST DE BEB 1 OPCAO", "lat": -6.442134, "lon": -48.137674}, {"seq": 48, "codigo": "00410344", "cliente": "SUP DEUS E FIEL", "lat": -6.440753, "lon": -48.138306}, {"seq": 49, "codigo": "00410353", "cliente": "BALNEARIO CAI NA AGU", "lat": -6.436161, "lon": -48.142263}, {"seq": 50, "codigo": "00410342", "cliente": "MERCEARIA DO ANTON01", "lat": -6.482948, "lon": -48.090487}, {"seq": 51, "codigo": "00410329", "cliente": "MERC BOM PRECO    01", "lat": -6.5019, "lon": -48.056748}, {"seq": 52, "codigo": "01002970", "cliente": "AGRO COMPO", "lat": -6.503573, "lon": -48.05351}, {"seq": 53, "codigo": "00410336", "cliente": "ADEGA GABRIEL", "lat": -6.505097, "lon": -48.052201}, {"seq": 54, "codigo": "00410347", "cliente": "SAPOS BAR", "lat": -6.508327, "lon": -48.05113}, {"seq": 55, "codigo": "00410330", "cliente": "COMERCIAL OLIVEIRA01", "lat": -6.508463, "lon": -48.051015}, {"seq": 56, "codigo": "00410327", "cliente": "BAR E ADEGA 10 ANOS", "lat": -6.508015, "lon": -48.050037}]}, {"id": "RT001006", "rotulo": "RMB-6G45 - Motorista 724", "veiculo": "RMB-6G45", "motorista_numero": "724", "paradas": [{"seq": 1, "codigo": "00430365", "cliente": "PIT STOP LANCHE", "lat": -6.6135, "lon": -47.546899}, {"seq": 2, "codigo": "00430378", "cliente": "REST SABOR NORDESTE", "lat": -6.613609, "lon": -47.54555}, {"seq": 3, "codigo": "00430372", "cliente": "GHS DISTRIBUIDORA", "lat": -6.611052, "lon": -47.545782}, {"seq": 4, "codigo": "00430362", "cliente": "ADEGA DO MACAUBA", "lat": -6.608052, "lon": -47.542227}, {"seq": 5, "codigo": "00430359", "cliente": "ADEGA NOVA ONDA", "lat": -6.60676, "lon": -47.548874}, {"seq": 6, "codigo": "00430377", "cliente": "BAR DA TOENHA", "lat": -6.607346, "lon": -47.548741}, {"seq": 7, "codigo": "00430371", "cliente": "JANTINHA DA VAL", "lat": -6.607418, "lon": -47.548736}, {"seq": 8, "codigo": "00430381", "cliente": "LA CASA DAS BEBIDAS", "lat": -6.607691, "lon": -47.549086}, {"seq": 9, "codigo": "00430361", "cliente": "MINI MERCADO BARAO01", "lat": -6.608758, "lon": -47.548826}, {"seq": 10, "codigo": "00110269", "cliente": "EMPORIO DAS BEBIDA00", "lat": -6.611095, "lon": -47.548509}, {"seq": 11, "codigo": "00430379", "cliente": "ADEGA HOUSE BEER", "lat": -6.611067, "lon": -47.549123}, {"seq": 12, "codigo": "00430375", "cliente": "KABANAS BAR       01", "lat": -6.613401, "lon": -47.550705}, {"seq": 13, "codigo": "00110262", "cliente": "BAR DO PEDRO NOVATO", "lat": -6.534253, "lon": -47.604599}, {"seq": 14, "codigo": "00150324", "cliente": "BAR DA ZETE", "lat": -6.435665, "lon": -47.668073}, {"seq": 15, "codigo": "00150333", "cliente": "BAR NO TRABALHO   01", "lat": -6.435955, "lon": -47.668641}, {"seq": 16, "codigo": "00150334", "cliente": "DISTRIBUIDORA TM", "lat": -6.435863, "lon": -47.668726}, {"seq": 17, "codigo": "00150316", "cliente": "ADEGA LD", "lat": -6.434575, "lon": -47.666862}, {"seq": 18, "codigo": "00150314", "cliente": "SANDUICHEIRA BRANDIN", "lat": -6.434928, "lon": -47.671468}, {"seq": 19, "codigo": "00150307", "cliente": "ADEGA DO GAUCHO", "lat": -6.435075, "lon": -47.672792}, {"seq": 20, "codigo": "00150330", "cliente": "BAR DO CLAUDIO", "lat": -6.434225, "lon": -47.671101}, {"seq": 21, "codigo": "00150319", "cliente": "SUPERMERCAD WG LOPES", "lat": -6.434825, "lon": -47.6787}, {"seq": 22, "codigo": "00110301", "cliente": "ADEGA SAO FRANCISCO", "lat": -6.379431, "lon": -47.662689}, {"seq": 23, "codigo": "00110276", "cliente": "MERCADINHO SANTOS 01", "lat": -6.379422, "lon": -47.662743}, {"seq": 24, "codigo": "00110317", "cliente": "DEPOSITO DO LUAN", "lat": -6.374936, "lon": -47.66356}, {"seq": 25, "codigo": "00110256", "cliente": "ACOUGUE CENTRAL   01", "lat": -6.37361, "lon": -47.663036}, {"seq": 26, "codigo": "00110300", "cliente": "IMPERIOMIX", "lat": -6.373357, "lon": -47.66374}, {"seq": 27, "codigo": "00110267", "cliente": "COMERCIAL TORRES  00", "lat": -6.373051, "lon": -47.664723}, {"seq": 28, "codigo": "00110313", "cliente": "AM DISTR DE BEBIDAS", "lat": -6.373498, "lon": -47.661728}, {"seq": 29, "codigo": "00110277", "cliente": "BAR TONHAO", "lat": -6.37583, "lon": -47.662083}, {"seq": 30, "codigo": "00110302", "cliente": "ADEGA 6 IRMAOS", "lat": -6.371831, "lon": -47.657718}, {"seq": 31, "codigo": "00110290", "cliente": "BALNEARIO CRUZ    01", "lat": -6.369211, "lon": -47.64906}, {"seq": 32, "codigo": "00110259", "cliente": "BAR DO MARIVALDO", "lat": -6.368648, "lon": -47.685147}, {"seq": 33, "codigo": "00110285", "cliente": "BAR DO PEDIM      00", "lat": -6.368483, "lon": -47.68443}, {"seq": 34, "codigo": "00110312", "cliente": "MERC DO VANDERLEI", "lat": -6.373776, "lon": -47.74037}, {"seq": 35, "codigo": "00110310", "cliente": "BAR DO JOAZINHO", "lat": -6.372675, "lon": -47.741743}, {"seq": 36, "codigo": "00110282", "cliente": "ADEGA E CLUB POPULAR", "lat": -6.316748, "lon": -47.79324}, {"seq": 37, "codigo": "00050238", "cliente": "BAR DO EDILSON    02", "lat": -6.33376, "lon": -47.841}, {"seq": 38, "codigo": "00110287", "cliente": "OPCAO SORVETERIA", "lat": -6.333488, "lon": -47.842214}, {"seq": 39, "codigo": "00110306", "cliente": "ADEGA 3A", "lat": -6.335164, "lon": -47.841711}, {"seq": 40, "codigo": "00110303", "cliente": "BAR DO CARLITO", "lat": -6.333166, "lon": -47.859627}, {"seq": 41, "codigo": "00110291", "cliente": "CANTINHO FAMILIAR", "lat": -6.273196, "lon": -47.864963}, {"seq": 42, "codigo": "00110265", "cliente": "MERCEARIA BARROSO", "lat": -6.273067, "lon": -47.864202}, {"seq": 43, "codigo": "00050243", "cliente": "BAR DO ERCILIO", "lat": -6.27312, "lon": -47.864148}, {"seq": 44, "codigo": "00110295", "cliente": "SUPER BOX SILVA", "lat": -6.273788, "lon": -47.862658}, {"seq": 45, "codigo": "00110305", "cliente": "RETORNO BAR", "lat": -6.273834, "lon": -47.86112}]}, {"id": "RT001007", "rotulo": "RMB-6G37 - Motorista 723", "veiculo": "RMB-6G37", "motorista_numero": "723", "paradas": [{"seq": 1, "codigo": "01002948", "cliente": "CASA DE CARNE ESTA02", "lat": -7.180348, "lon": -48.22138}, {"seq": 2, "codigo": "01000936", "cliente": "NOSSO LANCHE 02", "lat": -7.180658, "lon": -48.221615}, {"seq": 3, "codigo": "01000403", "cliente": "BAR LUIS", "lat": -7.180805, "lon": -48.22191}, {"seq": 4, "codigo": "01002617", "cliente": "REDE DITO PETROLEO", "lat": -7.178371, "lon": -48.223033}, {"seq": 5, "codigo": "01000297", "cliente": "GRAZY BAR", "lat": -7.178029, "lon": -48.223589}, {"seq": 6, "codigo": "01000871", "cliente": "HOTEL IDEAL", "lat": -7.177862, "lon": -48.223842}, {"seq": 7, "codigo": "01000545", "cliente": "BAR DA SOMBRA", "lat": -7.175953, "lon": -48.228566}, {"seq": 8, "codigo": "01002862", "cliente": "COMERCIAL ROCHA", "lat": -7.177648, "lon": -48.228446}, {"seq": 9, "codigo": "01002123", "cliente": "COMERCIAL NOLETO  01", "lat": -7.181385, "lon": -48.226935}, {"seq": 10, "codigo": "01002700", "cliente": "BAR DO CACULA", "lat": -7.185553, "lon": -48.231558}, {"seq": 11, "codigo": "01001882", "cliente": "SUPERMIX R E A", "lat": -7.174133, "lon": -48.234308}, {"seq": 12, "codigo": "01000213", "cliente": "COMERCIAL GABRIEL", "lat": -7.172526, "lon": -48.239481}, {"seq": 13, "codigo": "01002869", "cliente": "RANCHO DA PICANHA 02", "lat": -7.171766, "lon": -48.239191}, {"seq": 14, "codigo": "01002751", "cliente": "RANCHO IPE        01", "lat": -7.17948, "lon": -48.240246}, {"seq": 15, "codigo": "01000973", "cliente": "LIGADAO", "lat": -7.181655, "lon": -48.220658}, {"seq": 16, "codigo": "01002621", "cliente": "ASSIS BAR RESTURANTE", "lat": -7.180698, "lon": -48.219431}, {"seq": 17, "codigo": "01002504", "cliente": "COMERCIAL DOM ORIONE", "lat": -7.181933, "lon": -48.218801}, {"seq": 18, "codigo": "01001267", "cliente": "GOLD DISTRIBUIDORA D", "lat": -7.182474, "lon": -48.220068}, {"seq": 19, "codigo": "01000606", "cliente": "CONVENIENCIA 14", "lat": -7.180333, "lon": -48.219633}, {"seq": 20, "codigo": "01002756", "cliente": "ESPETINHO DO MAGAO", "lat": -7.1786, "lon": -48.217834}, {"seq": 21, "codigo": "01002747", "cliente": "BAR DA SONIA 2", "lat": -7.179158, "lon": -48.216161}, {"seq": 22, "codigo": "01002064", "cliente": "MULT CARNE", "lat": -7.185766, "lon": -48.216845}, {"seq": 23, "codigo": "01002985", "cliente": "DINIZ BEBIDAS E REST", "lat": -7.185481, "lon": -48.218523}, {"seq": 24, "codigo": "01002972", "cliente": "AAL TIME", "lat": -7.185962, "lon": -48.218299}, {"seq": 25, "codigo": "01000277", "cliente": "BAR DO ASSIS", "lat": -7.181868, "lon": -48.207329}]}, {"id": "RT001008", "rotulo": "RMB-6G42 - Motorista 728", "veiculo": "RMB-6G42", "motorista_numero": "728", "paradas": [{"seq": 1, "codigo": "01002125", "cliente": "O BAR", "lat": -7.205799, "lon": -48.240343}, {"seq": 2, "codigo": "01002820", "cliente": "BAR REST TEMP DE CAS", "lat": -7.202691, "lon": -48.235674}, {"seq": 3, "codigo": "01002306", "cliente": "BAR DA NENZINHA   01", "lat": -7.204537, "lon": -48.231404}, {"seq": 4, "codigo": "01002826", "cliente": "SUPER SUPER MIX", "lat": -7.197725, "lon": -48.23017}, {"seq": 5, "codigo": "01001239", "cliente": "MERCEARIA DA CLEONIC", "lat": -7.197431, "lon": -48.230727}, {"seq": 6, "codigo": "01002813", "cliente": "CHAMINE DO SABOR", "lat": -7.19655, "lon": -48.230187}, {"seq": 7, "codigo": "01002814", "cliente": "H2O DISTRIBUIDORA", "lat": -7.196487, "lon": -48.229718}, {"seq": 8, "codigo": "01001717", "cliente": "ADEGA E CONV REIS", "lat": -7.198185, "lon": -48.224798}, {"seq": 9, "codigo": "01000236", "cliente": "MERCANTIL BOM PRECO", "lat": -7.197713, "lon": -48.224275}, {"seq": 10, "codigo": "01000577", "cliente": "CAFUNE BAR COZINHA", "lat": -7.191295, "lon": -48.224078}, {"seq": 11, "codigo": "01000945", "cliente": "VEGAS CONVENIENCIA", "lat": -7.190476, "lon": -48.225752}, {"seq": 12, "codigo": "01000969", "cliente": "SUPERMERCADO ROCHA", "lat": -7.191725, "lon": -48.22249}, {"seq": 13, "codigo": "01000867", "cliente": "PREMIER PALACE HOTEL", "lat": -7.194377, "lon": -48.215096}, {"seq": 14, "codigo": "01000944", "cliente": "SELECT PREMIUM 01", "lat": -7.193985, "lon": -48.215104}, {"seq": 15, "codigo": "01002505", "cliente": "IMPULSAO DAS BEBID01", "lat": -7.188396, "lon": -48.21797}, {"seq": 16, "codigo": "01002363", "cliente": "GELO BOM MIX      01", "lat": -7.199773, "lon": -48.19629}, {"seq": 17, "codigo": "01002616", "cliente": "SUNSET BAR        01", "lat": -7.206863, "lon": -48.231259}, {"seq": 18, "codigo": "01002978", "cliente": "AGROBEER BAR E RESTA", "lat": -7.208405, "lon": -48.235908}, {"seq": 19, "codigo": "01002093", "cliente": "MERCADINHO DO VANDO", "lat": -7.216209, "lon": -48.253004}]}, {"id": "RT001010", "rotulo": "OLL-3030 - Sem motorista definido", "veiculo": "OLL-3030", "motorista_numero": null, "paradas": [{"seq": 1, "codigo": "01000759", "cliente": "DIST BEBIDAS MARRA", "lat": -7.190972, "lon": -48.226331}, {"seq": 2, "codigo": "01002790", "cliente": "BETEL DISTRIBUIDORA", "lat": -7.176512, "lon": -48.226605}, {"seq": 3, "codigo": "01002912", "cliente": "BAR DO NEGAO      01", "lat": -7.197407, "lon": -48.200354}]}, {"id": "RT001011", "rotulo": "OLL-3030 - Sem motorista definido", "veiculo": "OLL-3030", "motorista_numero": null, "paradas": [{"seq": 1, "codigo": "01001296", "cliente": "FULL TIME", "lat": -7.201612, "lon": -48.201659}, {"seq": 2, "codigo": "01000970", "cliente": "SUPER LIMA. 01", "lat": -7.202608, "lon": -48.182145}, {"seq": 3, "codigo": "01000732", "cliente": "ADEGA SUL 01", "lat": -7.191574, "lon": -48.189782}]}, {"id": "RT001012", "rotulo": "OLL-3030 - Sem motorista definido", "veiculo": "OLL-3030", "motorista_numero": null, "paradas": [{"seq": 1, "codigo": "01000774", "cliente": "MAGRO BEBIDA", "lat": -7.196666, "lon": -48.203348}, {"seq": 2, "codigo": "01000757", "cliente": "CONVENIENCIA UFC", "lat": -7.193785, "lon": -48.204916}, {"seq": 3, "codigo": "01000822", "cliente": "PRIME HOOKAH", "lat": -7.195448, "lon": -48.19969}, {"seq": 4, "codigo": "01001215", "cliente": "DISTRIBUI ON LINE", "lat": -7.162726, "lon": -48.191233}]}];
+const ORIGEM_GERAL = {"lat": -7.22722092594843, "lon": -48.24978544427654};
+const adminMsgEl = document.getElementById('adminMsg');
+
+let db = null;
+try {
+  firebase.initializeApp({"apiKey": "AIzaSyDZpcc1GgdbknHdkuI4dOx1myDR6PsLPic", "authDomain": "rotacertaog.firebaseapp.com", "projectId": "rotacertaog", "storageBucket": "rotacertaog.firebasestorage.app", "messagingSenderId": "1048075742585", "appId": "1:1048075742585:web:424f99f9a29fa0f23593a8"});
+  db = firebase.firestore();
+} catch (e) {
+  console.error(e);
+}
+
+// Filtro de motorista: esconde os cards de "Ajustar rotas de hoje" que nao
+// batem, e filtra o que aparece no mapa combinado (que aqui usa sempre as
+// paradas originais do PathFind, sem juntar ajuste manual -- o objetivo do
+// mapa aqui e' so' ajudar a enxergar onde fica tudo enquanto edita).
+function aplicarFiltroMotorista(id) {
+  document.querySelectorAll('.ajuste-rota').forEach(card => {
+    card.style.display = (!id || card.dataset.rotaId === id) ? '' : 'none';
+  });
+}
+function gruposParaMapa(idFiltro) {
+  return ROTAS_HOJE.filter(r => !idFiltro || r.id === idFiltro).map(r => ({ rotulo: r.rotulo, paradas: r.paradas }));
+}
+popularFiltroMotorista(ROTAS_HOJE);
+
+function senhaPadrao(numero) {
+  return numero + 'OG' + (numero % 10);
+}
+
+function mensagem(texto, ehErro) {
+  adminMsgEl.textContent = texto;
+  adminMsgEl.style.color = ehErro ? '#c00000' : '#1e7e34';
+}
+
+function montarLinha(numero) {
+  const linha = document.createElement('div');
+  linha.className = 'admin-linha';
+  linha.innerHTML =
+    '<span>' + numero + '</span>' +
+    '<input type="text" id="senha-' + numero + '" placeholder="(sem senha definida)">' +
+    '<button data-numero="' + numero + '">Salvar</button>';
+  linha.querySelector('button').addEventListener('click', () => {
+    const valor = document.getElementById('senha-' + numero).value.trim();
+    if (!valor) { mensagem('Digite uma senha antes de salvar (motorista ' + numero + ').', true); return; }
+    db.collection('motoristas').doc(String(numero)).set({ senha: valor })
+      .then(() => mensagem('Senha do motorista ' + numero + ' salva.', false))
+      .catch(err => { mensagem('Erro ao salvar a senha do motorista ' + numero + '.', true); console.error(err); });
+  });
+  return linha;
+}
+
+
+// --- ajuste manual de rotas (motorista, veiculo, ordem, exclusao, mensagem) ---
+
+function montarCardAjuste(rota) {
+  const card = document.createElement('details');
+  card.className = 'ajuste-rota';
+  card.dataset.rotaId = rota.id;
+  card.innerHTML =
+    '<summary>' + rota.rotulo + ' <small>(' + rota.paradas.length + ' paradas)</small></summary>' +
+    '<div class="ajuste-campos">' +
+      '<div class="ajuste-campo">' +
+        '<label for="ajusteMotorista-' + rota.id + '">Motorista</label>' +
+        '<select id="ajusteMotorista-' + rota.id + '"></select>' +
+      '</div>' +
+      '<div class="ajuste-campo">' +
+        '<label for="ajusteVeiculo-' + rota.id + '">Veiculo (placa)</label>' +
+        '<input type="text" id="ajusteVeiculo-' + rota.id + '" placeholder="' + (rota.veiculo || 'sem veiculo') + '">' +
+      '</div>' +
+    '</div>' +
+    '<div class="ajuste-paradas" id="ajusteParadas-' + rota.id + '"></div>' +
+    '<div class="ajuste-botoes">' +
+      '<button class="btn-salvar">Salvar ajustes</button>' +
+      '<button class="btn-limpar">Limpar ajustes (voltar ao original)</button>' +
+    '</div>' +
+    '<div class="ajuste-status" id="ajusteStatus-' + rota.id + '"></div>';
+
+  const selMotorista = card.querySelector('#ajusteMotorista-' + rota.id);
+  const optManter = document.createElement('option');
+  optManter.value = '';
+  optManter.textContent = 'Manter original (' + (rota.motorista_numero || 'sem motorista') + ')';
+  selMotorista.appendChild(optManter);
+  for (let n = NUMERO_MIN; n <= NUMERO_MAX; n++) {
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.textContent = String(n);
+    selMotorista.appendChild(opt);
+  }
+
+  const paradasEl = card.querySelector('#ajusteParadas-' + rota.id);
+  rota.paradas.forEach(p => {
+    const linha = document.createElement('div');
+    linha.className = 'ajuste-parada';
+    linha.dataset.codigo = p.codigo;
+    linha.innerHTML =
+      '<input type="number" class="ap-pos" value="' + p.seq + '">' +
+      '<span class="ap-nome">' + p.seq + '. ' + p.cliente + ' <small>(' + p.codigo + ')</small></span>' +
+      '<label><input type="checkbox" class="ap-excluir"> excluir</label>' +
+      '<input type="text" class="ap-mensagem" placeholder="Mensagem pro motorista sobre esse pedido (opcional)">';
+    linha.querySelector('.ap-excluir').addEventListener('change', ev => {
+      linha.classList.toggle('ap-excluida', ev.target.checked);
+    });
+    paradasEl.appendChild(linha);
+  });
+
+  card.querySelector('.btn-salvar').addEventListener('click', () => salvarAjuste(rota));
+  card.querySelector('.btn-limpar').addEventListener('click', () => limparAjuste(rota));
+
+  return card;
+}
+
+function salvarAjuste(rota) {
+  const statusEl = document.getElementById('ajusteStatus-' + rota.id);
+  const motoristaEl = document.getElementById('ajusteMotorista-' + rota.id);
+  const veiculoEl = document.getElementById('ajusteVeiculo-' + rota.id);
+  const linhas = Array.from(document.querySelectorAll('#ajusteParadas-' + rota.id + ' .ajuste-parada'));
+
+  const removidos = [];
+  const comPosicao = [];
+  const mensagens = {};
+  linhas.forEach((linha, i) => {
+    const codigo = linha.dataset.codigo;
+    const mensagem = linha.querySelector('.ap-mensagem').value.trim();
+    if (mensagem) mensagens[codigo] = mensagem;
+    if (linha.querySelector('.ap-excluir').checked) { removidos.push(codigo); return; }
+    const pos = parseFloat(linha.querySelector('.ap-pos').value);
+    comPosicao.push({ codigo: codigo, pos: isNaN(pos) ? i : pos, i: i });
+  });
+  comPosicao.sort((a, b) => (a.pos - b.pos) || (a.i - b.i));
+  const ordem = comPosicao.map(x => x.codigo);
+
+  const doc = {
+    data: DATA_ISO,
+    rota_id: rota.id,
+    motorista_numero: motoristaEl.value || null,
+    veiculo: veiculoEl.value.trim() || null,
+    removidos: removidos,
+    ordem: ordem,
+    mensagens: mensagens,
+    atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  statusEl.textContent = 'Salvando...';
+  statusEl.style.color = '';
+  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rota.id).set(doc)
+    .then(() => { statusEl.textContent = 'Ajustes salvos.'; statusEl.style.color = '#1e7e34'; })
+    .catch(err => { statusEl.textContent = 'Erro ao salvar os ajustes.'; statusEl.style.color = '#c00000'; console.error(err); });
+}
+
+function limparAjuste(rota) {
+  const statusEl = document.getElementById('ajusteStatus-' + rota.id);
+  db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rota.id).delete()
+    .then(() => {
+      statusEl.textContent = 'Ajustes removidos, rota voltou ao original do PathFind.';
+      statusEl.style.color = '#1e7e34';
+      document.getElementById('ajusteMotorista-' + rota.id).value = '';
+      document.getElementById('ajusteVeiculo-' + rota.id).value = '';
+      document.querySelectorAll('#ajusteParadas-' + rota.id + ' .ajuste-parada').forEach((linha, i) => {
+        linha.querySelector('.ap-excluir').checked = false;
+        linha.classList.remove('ap-excluida');
+        linha.querySelector('.ap-pos').value = i + 1;
+        linha.querySelector('.ap-mensagem').value = '';
+      });
+    })
+    .catch(err => { statusEl.textContent = 'Erro ao limpar os ajustes.'; statusEl.style.color = '#c00000'; console.error(err); });
+}
+
+function carregarAjustes() {
+  const listaEl = document.getElementById('listaAjustes');
+  listaEl.innerHTML = '';
+  if (!ROTAS_HOJE.length) {
+    listaEl.innerHTML = '<p style="text-align:center; font-size:0.8rem; color:#888;">Nenhuma rota gerada ainda hoje.</p>';
+    return;
+  }
+  ROTAS_HOJE.forEach(rota => {
+    const card = montarCardAjuste(rota);
+    listaEl.appendChild(card);
+    db.collection('ajustes_rotas').doc(DATA_ISO + '_' + rota.id).get().then(doc => {
+      if (!doc.exists) return;
+      const d = doc.data();
+      if (d.motorista_numero) document.getElementById('ajusteMotorista-' + rota.id).value = d.motorista_numero;
+      if (d.veiculo) document.getElementById('ajusteVeiculo-' + rota.id).value = d.veiculo;
+      const removidos = new Set(d.removidos || []);
+      const posicao = new Map((d.ordem || []).map((c, i) => [c, i]));
+      const mensagens = d.mensagens || {};
+      document.querySelectorAll('#ajusteParadas-' + rota.id + ' .ajuste-parada').forEach(linha => {
+        const codigo = linha.dataset.codigo;
+        if (removidos.has(codigo)) {
+          linha.querySelector('.ap-excluir').checked = true;
+          linha.classList.add('ap-excluida');
+        }
+        if (posicao.has(codigo)) {
+          linha.querySelector('.ap-pos').value = posicao.get(codigo) + 1;
+        }
+        if (mensagens[codigo]) {
+          linha.querySelector('.ap-mensagem').value = mensagens[codigo];
+        }
+      });
+      card.open = true;
+      card.querySelector('summary').insertAdjacentHTML('beforeend', ' <span class="tag-ajustada">ajustada</span>');
+    }).catch(err => console.error('Falha ao carregar ajuste existente:', err));
+  });
+}
+
+
+function carregarMotoristas() {
+  const listaEl = document.getElementById('listaMotoristas');
+  listaEl.innerHTML = '';
+  for (let numero = NUMERO_MIN; numero <= NUMERO_MAX; numero++) {
+    listaEl.appendChild(montarLinha(numero));
+    db.collection('motoristas').doc(String(numero)).get().then(doc => {
+      if (doc.exists && doc.data().senha) {
+        const campo = document.getElementById('senha-' + numero);
+        if (campo) campo.value = doc.data().senha;
+      }
+    }).catch(err => console.error(err));
+  }
+}
+
+document.getElementById('btnGerarPadrao').addEventListener('click', () => {
+  if (!confirm('Isso substitui a senha de TODOS os motoristas (' + NUMERO_MIN + ' a ' + NUMERO_MAX + ') pelo padrao. Continuar?')) return;
+  let pendentes = 0;
+  for (let numero = NUMERO_MIN; numero <= NUMERO_MAX; numero++) {
+    pendentes++;
+    const senha = senhaPadrao(numero);
+    db.collection('motoristas').doc(String(numero)).set({ senha: senha })
+      .then(() => {
+        const campo = document.getElementById('senha-' + numero);
+        if (campo) campo.value = senha;
+        pendentes--;
+        if (pendentes === 0) mensagem('Senhas padrao geradas para todos os motoristas.', false);
+      })
+      .catch(err => { mensagem('Erro ao gerar as senhas padrao.', true); console.error(err); });
+  }
+});
+
+document.getElementById('btnSalvarAdmin').addEventListener('click', () => {
+  const valor = document.getElementById('novaSenhaAdmin').value.trim();
+  if (!valor) { mensagem('Digite a nova senha administrativa antes de salvar.', true); return; }
+  db.collection('motoristas').doc('admin').set({ senha: valor })
+    .then(() => { mensagem('Senha administrativa atualizada.', false); document.getElementById('novaSenhaAdmin').value = ''; })
+    .catch(err => { mensagem('Erro ao salvar a senha administrativa.', true); console.error(err); });
+});
+
+if (sessionStorage.getItem('painel_desbloqueado') === 'sim') {
+  document.body.classList.remove('bloqueado');
+  carregarMotoristas();
+  carregarAjustes();
+} else {
+  document.getElementById('formSenhaAdmin').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const erroEl = document.getElementById('bloqueioErroAdmin');
+    if (!db) {
+      erroEl.textContent = 'Sem conexao. Confira sua internet e tente de novo.';
+      return;
+    }
+    const senhaDigitada = document.getElementById('campoSenhaAdmin').value;
+    erroEl.textContent = 'Verificando...';
+    db.collection('motoristas').doc('admin').get().then(doc => {
+      if (doc.exists && doc.data().senha === senhaDigitada) {
+        sessionStorage.setItem('painel_desbloqueado', 'sim');
+        document.body.classList.remove('bloqueado');
+        carregarMotoristas();
+        carregarAjustes();
+      } else {
+        erroEl.textContent = 'Senha incorreta.';
+      }
+    }).catch(err => {
+      erroEl.textContent = 'Erro ao verificar a senha.';
+      console.error(err);
+    });
+  });
+}
+
+const NOMES_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+fetch('../manifest.json').then(r => r.json()).then(dias => {
+  const selAno = document.getElementById('seletorAno');
+  const selMes = document.getElementById('seletorMes');
+  const selDia = document.getElementById('seletorData');
+
+  dias.forEach(d => {
+    d._ano = d.data.slice(0, 4);
+    d._mes = d.data.slice(5, 7);
+  });
+
+  function popularAnos(anoSelecionado) {
+    const anos = [...new Set(dias.map(d => d._ano))].sort().reverse();
+    selAno.innerHTML = '';
+    anos.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.textContent = a;
+      selAno.appendChild(opt);
+    });
+    selAno.value = anos.includes(anoSelecionado) ? anoSelecionado : anos[0];
+  }
+
+  function popularMeses(ano, mesSelecionado) {
+    const mesesDoAno = [...new Set(dias.filter(d => d._ano === ano).map(d => d._mes))].sort().reverse();
+    selMes.innerHTML = '';
+    mesesDoAno.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = NOMES_MESES[parseInt(m, 10) - 1];
+      selMes.appendChild(opt);
+    });
+    selMes.value = mesesDoAno.includes(mesSelecionado) ? mesSelecionado : mesesDoAno[0];
+  }
+
+  function popularDias(ano, mes) {
+    const diasDoMes = dias.filter(d => d._ano === ano && d._mes === mes);
+    selDia.innerHTML = '';
+    diasDoMes.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.data;
+      opt.textContent = d.data_br + ' (' + d.rotas + ' rota(s))';
+      selDia.appendChild(opt);
+    });
+    if (diasDoMes.length) selDia.value = diasDoMes[0].data;
+  }
+
+  const anoAtual = '2026-10-23'.slice(0, 4);
+  const mesAtual = '2026-10-23'.slice(5, 7);
+  popularAnos(anoAtual);
+  popularMeses(selAno.value, mesAtual);
+  popularDias(selAno.value, selMes.value);
+  selDia.value = '2026-10-23';
+
+  function navegarParaDiaSelecionado() {
+    if (selDia.value) window.location.href = '../' + selDia.value + '/admin.html';
+  }
+
+  // Trocar ano/mes repopula o seletor de dia e ja' deixa o dia mais recente
+  // daquele mes pre-selecionado -- sem isso, quando esse dia pre-selecionado
+  // e' exatamente o que o usuario queria, o <select> de dia nunca dispara
+  // 'change' (o valor nao mudou de fato) e a navegacao parece nao acontecer.
+  selAno.addEventListener('change', () => {
+    popularMeses(selAno.value, selMes.value);
+    popularDias(selAno.value, selMes.value);
+    navegarParaDiaSelecionado();
+  });
+  selMes.addEventListener('change', () => {
+    popularDias(selAno.value, selMes.value);
+    navegarParaDiaSelecionado();
+  });
+  selDia.addEventListener('change', navegarParaDiaSelecionado);
+}).catch(() => {});
+
+var motoristaFiltroValor = '';
+function motoristaFiltroAtual() { return motoristaFiltroValor; }
+
+function popularFiltroMotorista(rotas) {
+  const sel = document.getElementById('seletorMotorista');
+  if (!sel) return;
+  rotas.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.rotulo;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => {
+    motoristaFiltroValor = sel.value;
+    aplicarFiltroMotorista(motoristaFiltroValor);
+    atualizarMapaGeral();
+  });
+}
+
+const PALETA_CORES = ['#1f4e78','#c00000','#1e7e34','#b8860b','#6a1b9a','#008b8b','#d2691e','#4169e1','#a0522d','#2e8b57','#dc143c','#4682b4','#8b008b','#556b2f'];
+var mapaGeralInstancia = null;
+
+// Ultima localizacao conhecida de cada motorista (colecao
+// "localizacao_motoristas" do Firestore), so' preenchida nas paginas que
+// escutam essa colecao (hoje, so' o painel do supervisor). Nas demais
+// paginas que reaproveitam este bloco (admin/analista) fica vazio, e o
+// mapa simplesmente nao desenha nenhum marcador de localizacao -- nao
+// quebra nada.
+let ultimasLocalizacoes = {};
+
+function corMotorista(indice) {
+  return PALETA_CORES[indice % PALETA_CORES.length];
+}
+
+function tempoDecorrido(timestamp) {
+  if (!timestamp || !timestamp.toDate) return '';
+  const diffMin = Math.round((Date.now() - timestamp.toDate().getTime()) / 60000);
+  if (diffMin < 1) return 'agora mesmo';
+  if (diffMin < 60) return 'ha ' + diffMin + ' min';
+  return 'ha ' + Math.round(diffMin / 60) + ' h';
+}
+
+function construirMapaGeral(grupos) {
+  const mapa = L.map('mapaGeral', { preferCanvas: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(mapa);
+
+  const iconeOrigem = L.divIcon({
+    className: 'icone-origem',
+    html: '<div style="background:#c00000;color:#fff;border-radius:50%;width:22px;height:22px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:12px;' +
+          'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);">&#128666;</div>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
+  });
+
+  const pontos = [[ORIGEM_GERAL.lat, ORIGEM_GERAL.lon]];
+  L.marker([ORIGEM_GERAL.lat, ORIGEM_GERAL.lon], { icon: iconeOrigem })
+    .bindPopup('<b>Saida do caminhao</b>')
+    .addTo(mapa);
+
+  const legendaEl = document.getElementById('legendaMotoristas');
+  legendaEl.innerHTML = '';
+  grupos.forEach((grupo, i) => {
+    const cor = corMotorista(i);
+    const item = document.createElement('div');
+    item.className = 'legenda-item';
+    item.innerHTML = '<span class="legenda-cor" style="background:' + cor + '"></span>' + grupo.rotulo;
+    legendaEl.appendChild(item);
+    grupo.paradas.forEach(p => {
+      pontos.push([p.lat, p.lon]);
+      L.circleMarker([p.lat, p.lon], {
+        radius: 7, color: '#fff', weight: 1.5, fillColor: cor, fillOpacity: 0.9
+      }).bindPopup('<b>' + grupo.rotulo + '</b><br>' + p.seq + '. ' + p.cliente).addTo(mapa);
+    });
+  });
+
+  const iconeLocalizacao = L.divIcon({
+    className: 'icone-localizacao-motorista',
+    html: '<div style="background:#212529;color:#fff;border-radius:50%;width:24px;height:24px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:13px;' +
+          'border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5);">&#128666;</div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+  Object.values(ultimasLocalizacoes).forEach(loc => {
+    if (typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
+    pontos.push([loc.lat, loc.lon]);
+    L.marker([loc.lat, loc.lon], { icon: iconeLocalizacao, zIndexOffset: 1000 })
+      .bindPopup('<b>' + (loc.rotulo || 'Motorista') + '</b><br>Ultima localizacao: ' + tempoDecorrido(loc.atualizado_em))
+      .addTo(mapa);
+  });
+
+  if (pontos.length) mapa.fitBounds(pontos, { padding: [30, 30] });
+  return mapa;
+}
+
+function atualizarMapaGeral() {
+  try {
+    const detalhes = document.getElementById('detalhesMapaGeral');
+    if (!detalhes || !detalhes.open) return;
+    if (mapaGeralInstancia) {
+      mapaGeralInstancia.remove();
+      mapaGeralInstancia = null;
+    }
+    mapaGeralInstancia = construirMapaGeral(gruposParaMapa(motoristaFiltroAtual()));
+  } catch (e) {
+    console.error('Falha ao montar o mapa combinado:', e);
+  }
+}
+
+const detalhesMapaGeralEl = document.getElementById('detalhesMapaGeral');
+if (detalhesMapaGeralEl) {
+  detalhesMapaGeralEl.addEventListener('toggle', atualizarMapaGeral);
+}
+
+</script>
+</body>
+</html>
