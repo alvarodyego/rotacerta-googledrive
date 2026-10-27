@@ -46,7 +46,9 @@ _PEDIDO_RE = re.compile(r"O(\d{4}-\d{2}-\d{2})(\d+)")
 # digitos pode casar por acidente com o final da 2a data colado a um codigo
 # seguinte (ex: "...07-22" + "000559" = 8 digitos que nao sao o codigo do
 # cliente).
-_CLIENTE_RE = re.compile(r"(?<!\S)(\d{8})\s+(.+?)\s{2,}O\d{4}-\d{2}-\d{2}\d+")
+# Nome lazy ate' o marcador "O<data><pedido>": nomes longos enchem a coluna
+# e encostam no marcador sem espaco, e ha codigos de cliente fora dos 8 digitos.
+_CLIENTE_RE = re.compile(r"(?<!\S)(\d{6,10})\s+(.+?)\s*O\d{4}-\d{2}-\d{2}\d+")
 
 # Lat/lon seguidos do primeiro horario HH:MM (par de decimais negativos).
 # O horario fica em lookahead (nao consome) para que o bloco de 3 horarios
