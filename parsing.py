@@ -46,7 +46,7 @@ _PEDIDO_RE = re.compile(r"O(\d{4}-\d{2}-\d{2})(\d+)")
 # digitos pode casar por acidente com o final da 2a data colado a um codigo
 # seguinte (ex: "...07-22" + "000559" = 8 digitos que nao sao o codigo do
 # cliente).
-_CLIENTE_RE = re.compile(r"(\d{8})\s+(.+?)\s{2,}O\d{4}-\d{2}-\d{2}\d+")
+_CLIENTE_RE = re.compile(r"(?<!\S)(\d{8})\s+(.+?)\s{2,}O\d{4}-\d{2}-\d{2}\d+")
 
 # Lat/lon seguidos do primeiro horario HH:MM (par de decimais negativos).
 # O horario fica em lookahead (nao consome) para que o bloco de 3 horarios
@@ -157,14 +157,23 @@ def parse_linha(linha: str, numero_linha: int = 0) -> Entrega | None:
     # fazia a marcacao de entrega de todas as paradas ficar amarrada numa
     # unica chave -- ver historico de bug de status compartilhado entre
     # paradas.
-    veic_m = re.search(r"([A-Z]{3}-[A-Z0-9]{4}\d+)\s+.*?\d{4}-\d{2}-\d{2}(?:\d{4}-\d{2}-\d{2})?", linha[rota_m.end():])
-    veiculo = veic_m.group(1)[:8] if veic_m else ""
+    #
+    # Um terceiro formato traz DOIS rotulos de dia da semana e nenhuma data
+    # (ex: "TUE -CT-20TUE -CT-20072336"); exigir uma data aqui fazia a busca
+    # pular ate' a data do pedido, depois do nome do cliente, e o cliente
+    # saia vazio. Por isso so' a placa e' ancorada; o codigo do cliente e'
+    # achado por _CLIENTE_RE, que exige espaco antes dos 8 digitos (nunca
+    # colados a uma data ou rotulo).
+    # A sequencia (lazy) para antes de um espaco ou de uma data colada: com
+    # 100+ paradas o preenchimento some e vem "RMB-6G37" + "1101" + "2026-...".
+    veic_m = re.search(r"([A-Z]{3}-[A-Z0-9]{4})(\d+?)(?=\s|\d{4}-\d{2}-\d{2})", linha[rota_m.end():])
+    veiculo = veic_m.group(1) if veic_m else ""
     fim_datas = rota_m.end() + veic_m.end() if veic_m else rota_m.end()
 
     sequencia_original = None
     if veic_m:
-        sufixo = veic_m.group(1)[8:]
-        if len(sufixo) >= 2 and sufixo.isdigit():
+        sufixo = veic_m.group(2)
+        if len(sufixo) >= 2:
             sequencia_original = int(sufixo[1:])
 
     cliente_m = _CLIENTE_RE.search(linha, pos=fim_datas)
@@ -231,5 +240,11 @@ def parse_conteudo(texto: str) -> dict[str, list[Entrega]]:
 
 def parse_arquivo(caminho: str, encoding: str = "latin-1") -> dict[str, list[Entrega]]:
     """Le o arquivo .txt do PathFind e devolve as entregas agrupadas por rota."""
+    rotas: dict[str, list[Entrega]] = {}
     with open(caminho, "r", encoding=encoding, errors="replace") as f:
-        return parse_conteudo(f.read())
+        for i, linha in enumerate(f, start=1):
+            entrega = parse_linha(linha, numero_linha=i)
+            if entrega is None:
+                continue
+            rotas.setdefault(entrega.rota, []).append(entrega)
+    return rotas
