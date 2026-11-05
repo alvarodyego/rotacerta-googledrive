@@ -39,7 +39,8 @@ class Entrega:
 _ROTA_RE = re.compile(r"^\s*(RT\d+)")
 
 # Marcador de pedido: "O2026-07-20114" -> data + numero do pedido colado.
-_PEDIDO_RE = re.compile(r"O(\d{4}-\d{2}-\d{2})(\d+)")
+# Alguns pedidos vem com uma letra na frente do numero (ex: "O2026-11-04R0001").
+_PEDIDO_RE = re.compile(r"O(\d{4}-\d{2}-\d{2})([A-Z]?\d+)")
 
 # Codigo (8 digitos) e nome do cliente, antes do marcador "O<data>". A busca
 # deve comecar depois do bloco de datas duplicadas, senao o regex de 8
@@ -48,7 +49,7 @@ _PEDIDO_RE = re.compile(r"O(\d{4}-\d{2}-\d{2})(\d+)")
 # cliente).
 # Nome lazy ate' o marcador "O<data><pedido>": nomes longos enchem a coluna
 # e encostam no marcador sem espaco, e ha codigos de cliente fora dos 8 digitos.
-_CLIENTE_RE = re.compile(r"(?<!\S)(\d{6,10})\s+(.+?)\s*O\d{4}-\d{2}-\d{2}\d+")
+_CLIENTE_RE = re.compile(r"(?<!\S)(\d{6,10})\s+(.+?)\s*O\d{4}-\d{2}-\d{2}[A-Z]?\d+")
 
 # Lat/lon seguidos do primeiro horario HH:MM (par de decimais negativos).
 # O horario fica em lookahead (nao consome) para que o bloco de 3 horarios
