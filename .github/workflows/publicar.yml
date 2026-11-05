@@ -2,11 +2,19 @@ name: Publicar rotas a partir do Google Drive
 
 on:
   schedule:
-    # UTC-3 (Araguaina, sem horario de verao): 06h, 08:30, 13h, 17h, 20h e 21h.
-    # Evita a hora cheia (:00) porque o GitHub atrasa muito nela.
-    - cron: "23 9,16,20,23,0 * * *"
-    - cron: "30 11 * * *"
+    # Confere a pasta a cada 20 min das 5h as 23h (UTC-3, Araguaina, sem
+    # horario de verao). Sem arquivo novo, a execucao termina sem publicar.
+    # Muitas execucoes porque o GitHub perde/atrasa varias delas; evita o
+    # minuto :00, que e' o mais congestionado.
+    - cron: "7,27,47 8-23 * * *"   # 05:07 ate' 20:47
+    - cron: "7,27,47 0,1 * * *"    # 21:07 ate' 22:47
+    - cron: "7 2 * * *"            # 23:07
   workflow_dispatch: {}
+
+# Uma execucao por vez, para duas nao tentarem publicar ao mesmo tempo.
+concurrency:
+  group: publicar-rotas
+  cancel-in-progress: false
 
 permissions:
   contents: write
