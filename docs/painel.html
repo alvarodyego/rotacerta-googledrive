@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#1f4e78">
-<title>Painel do supervisor - 05/11/2026</title>
+<title>Painel do supervisor - 06/11/2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 :root { --azul: #1f4e78; --azul-claro: #eaf1f8; --texto: #1a1a1a; --borda: #d9dfe6; }
@@ -136,13 +136,13 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 <header>
   <h1>Painel do supervisor</h1>
   <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
-  <div class="sub">Rotas de 05/11/2026</div>
+  <div class="sub">Rotas de 06/11/2026</div>
 </header>
 <div class="filtro-data">
   <label for="seletorAno">Ver rotas de:</label>
   <select id="seletorAno" class="compacta"></select>
   <select id="seletorMes" class="compacta"></select>
-  <select id="seletorData"><option value="2026-11-05">05/11/2026 (hoje)</option></select>
+  <select id="seletorData"><option value="2026-11-06">06/11/2026 (hoje)</option></select>
   <a href="painel.html">Ir para hoje</a>
 </div>
 <div class="filtro-motorista">
@@ -163,7 +163,7 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const ROTAS = [{"id": "RT001002", "rotulo": "RMB-6G40 - Motorista 721", "veiculo": "RMB-6G40", "motorista_numero": "721", "paradas": [{"seq": 1, "codigo": "01001272", "cliente": "ADEGAO MIX        01", "lat": -7.218481, "lon": -48.237841}, {"seq": 2, "codigo": "01003031", "cliente": "CONVENIENCIA JK", "lat": -7.2069511, "lon": -48.241721}, {"seq": 3, "codigo": "01003002", "cliente": "C/ DE CARNE ALVORADA", "lat": -7.202642, "lon": -48.239892}, {"seq": 4, "codigo": "01001275", "cliente": "CELSONS BAR", "lat": -7.162433, "lon": -48.206061}, {"seq": 5, "codigo": "01002307", "cliente": "SOMBRA BELA", "lat": -7.163576, "lon": -48.204903}, {"seq": 6, "codigo": "01000002", "cliente": "COMERCIAL FILHO", "lat": -7.162433, "lon": -48.20329}, {"seq": 7, "codigo": "01003009", "cliente": "IMPERIO BEBIDAS   02", "lat": -7.162633, "lon": -48.202099}, {"seq": 8, "codigo": "01000128", "cliente": "COMERCIAL PARAMBU", "lat": -7.161357, "lon": -48.19829}, {"seq": 9, "codigo": "01002923", "cliente": "ADEGA LUZ", "lat": -7.161258, "lon": -48.198171}, {"seq": 10, "codigo": "01000311", "cliente": "BAR DA SANDRA 02", "lat": -7.160041, "lon": -48.198489}, {"seq": 11, "codigo": "01000514", "cliente": "BAR DO ZE 04", "lat": -7.160187, "lon": -48.199298}, {"seq": 12, "codigo": "01000409", "cliente": "NADIR BAR", "lat": -7.160213, "lon": -48.196475}, {"seq": 13, "codigo": "01000279", "cliente": "JAMBINHO BAR", "lat": -7.160105, "lon": -48.194904}, {"seq": 14, "codigo": "01000123", "cliente": "COMERCIAL DM", "lat": -7.158401, "lon": -48.193735}, {"seq": 15, "codigo": "01002719", "cliente": "CS DE CARNES PAGUE M", "lat": -7.15858, "lon": -48.19556}, {"seq": 16, "codigo": "01002321", "cliente": "REST PE DE AMENDOA", "lat": -7.158523, "lon": -48.196824}, {"seq": 17, "codigo": "01001543", "cliente": "ARAUJO MIX", "lat": -7.158726, "lon": -48.197398}, {"seq": 18, "codigo": "01000985", "cliente": "SUPERMERCADO TORRES", "lat": -7.159063, "lon": -48.191196}, {"seq": 19, "codigo": "01002774", "cliente": "SUPER SACOLAO AS NEV", "lat": -7.159541, "lon": -48.188003}, {"seq": 20, "codigo": "01002808", "cliente": "BAR RECANTO DO SUCEG", "lat": -7.157206, "lon": -48.188336}, {"seq": 21, "codigo": "01000751", "cliente": "ADEGA DO APOLO", "lat": -7.156617, "lon": -48.188511}, {"seq": 22, "codigo": "01001935", "cliente": "JARDEL BEBIDAS", "lat": -7.151319, "lon": -48.189139}, {"seq": 23, "codigo": "01000101", "cliente": "CASA D CARNE MARIANE", "lat": -7.152245, "lon": -48.190958}, {"seq": 24, "codigo": "01000138", "cliente": "REAL PRECO", "lat": -7.154344, "lon": -48.192826}, {"seq": 25, "codigo": "01000227", "cliente": "MERCE DO FERNANDO", "lat": -7.154755, "lon": -48.192692}, {"seq": 26, "codigo": "01002534", "cliente": "MERC BOM PRECO", "lat": -7.150195, "lon": -48.185261}, {"seq": 27, "codigo": "01003001", "cliente": "SUPER MIX VIA NORT01", "lat": -7.159712, "lon": -48.185983}, {"seq": 28, "codigo": "01002881", "cliente": "ADEGA DO GABRIEL", "lat": -7.162766, "lon": -48.18565}, {"seq": 29, "codigo": "01002115", "cliente": "ADEGA DO TIAO", "lat": -7.169693, "lon": -48.192869}, {"seq": 30, "codigo": "01003027", "cliente": "BAR E ADEGA RODRIGUE", "lat": -7.172428, "lon": -48.194908}]}, {"id": "RT001003", "rotulo": "RMB-6G37 - Motorista 723", "veiculo": "RMB-6G37", "motorista_numero": "723", "paradas": [{"seq": 1, "codigo": "01001239", "cliente": "MERCEARIA DA CLEONIC", "lat": -7.197431, "lon": -48.230727}, {"seq": 2, "codigo": "01000263", "cliente": "BAROLI FAST FOOD", "lat": -7.195465, "lon": -48.219233}, {"seq": 3, "codigo": "01002475", "cliente": "TINS MANIA 2 CHURRAS", "lat": -7.186876, "lon": -48.211962}, {"seq": 4, "codigo": "01001548", "cliente": "MINE CENTER CAZUEZA", "lat": -7.183596, "lon": -48.209562}, {"seq": 5, "codigo": "01002969", "cliente": "BORA BAR E RESTAURAN", "lat": -7.180801, "lon": -48.207771}, {"seq": 6, "codigo": "01002528", "cliente": "SUPERMERCADO NUNES", "lat": -7.18061, "lon": -48.205929}, {"seq": 7, "codigo": "01002053", "cliente": "BAR DA ROSE", "lat": -7.180777, "lon": -48.205457}, {"seq": 8, "codigo": "01000299", "cliente": "BAR BOA IDEIA", "lat": -7.179686, "lon": -48.205554}, {"seq": 9, "codigo": "01000763", "cliente": "CONV OPCAO", "lat": -7.179324, "lon": -48.206339}, {"seq": 10, "codigo": "01000591", "cliente": "BAR DO GALEGO", "lat": -7.179351, "lon": -48.20717}, {"seq": 11, "codigo": "01002529", "cliente": "BAR J M BABIDAS", "lat": -7.177254, "lon": -48.212336}, {"seq": 12, "codigo": "01000959", "cliente": "MERCADINHO OPCAO", "lat": -7.176229, "lon": -48.210409}, {"seq": 13, "codigo": "01001037", "cliente": "ELIOCAR ROSA", "lat": -7.175523, "lon": -48.211141}, {"seq": 14, "codigo": "01001608", "cliente": "ESPETINHO DO ZELIO", "lat": -7.173488, "lon": -48.209289}, {"seq": 15, "codigo": "01002295", "cliente": "CONVENIENCIA ROCHA", "lat": -7.173491, "lon": -48.209245}, {"seq": 16, "codigo": "01002571", "cliente": "BAR DO PAULO      03", "lat": -7.173352, "lon": -48.20925}, {"seq": 17, "codigo": "01000126", "cliente": "POINT DO COLTO", "lat": -7.1739777, "lon": -48.207907}, {"seq": 18, "codigo": "01001607", "cliente": "BAR DO NELIO", "lat": -7.173676, "lon": -48.207576}, {"seq": 19, "codigo": "01001606", "cliente": "BAR DO CHICAO", "lat": -7.173325, "lon": -48.207335}, {"seq": 20, "codigo": "01002602", "cliente": "ADEGA E MERC CRISTAL", "lat": -7.178137, "lon": -48.214104}, {"seq": 21, "codigo": "01002172", "cliente": "ADEGA CANA BRAVA", "lat": -7.184421, "lon": -48.206624}, {"seq": 22, "codigo": "01001400", "cliente": "BAR DO CARNEIRO", "lat": -7.183168, "lon": -48.201491}, {"seq": 23, "codigo": "01000800", "cliente": "CANARINHO CONVENIENC", "lat": -7.184618, "lon": -48.202575}, {"seq": 24, "codigo": "01001118", "cliente": "BEER BRASIL", "lat": -7.1812, "lon": -48.201743}, {"seq": 25, "codigo": "01001068", "cliente": "PADARIA DA HORA", "lat": -7.17887, "lon": -48.201033}, {"seq": 26, "codigo": "01002206", "cliente": "ADEGA DO GORDO", "lat": -7.179361, "lon": -48.200445}, {"seq": 27, "codigo": "01001149", "cliente": "SUPERMERCADO BRASIL", "lat": -7.17792, "lon": -48.20007}, {"seq": 28, "codigo": "01002215", "cliente": "ESPETINHO DA TIA", "lat": -7.179805, "lon": -48.199306}, {"seq": 29, "codigo": "01003013", "cliente": "TIMES SQUARE BAR", "lat": -7.188829, "lon": -48.201912}, {"seq": 30, "codigo": "01002550", "cliente": "ACOUGUE PN CARNES", "lat": -7.191942, "lon": -48.189481}, {"seq": 31, "codigo": "01002885", "cliente": "ESPET FIM DE TARDE", "lat": -7.197045, "lon": -48.189898}, {"seq": 32, "codigo": "01002350", "cliente": "SUPER RIBEIRO", "lat": -7.195542, "lon": -48.181755}]}];
-const DATA_ISO = '2026-11-05';
+const DATA_ISO = '2026-11-06';
 const ORIGEM_GERAL = {"lat": -7.22722092594843, "lon": -48.24978544427654};
 const painelEl = document.getElementById('painel');
 const statusConexaoEl = document.getElementById('statusConexao');
@@ -417,12 +417,12 @@ fetch('historico/manifest.json').then(r => r.json()).then(dias => {
     if (diasDoMes.length) selDia.value = diasDoMes[0].data;
   }
 
-  const anoAtual = '2026-11-05'.slice(0, 4);
-  const mesAtual = '2026-11-05'.slice(5, 7);
+  const anoAtual = '2026-11-06'.slice(0, 4);
+  const mesAtual = '2026-11-06'.slice(5, 7);
   popularAnos(anoAtual);
   popularMeses(selAno.value, mesAtual);
   popularDias(selAno.value, selMes.value);
-  selDia.value = '2026-11-05';
+  selDia.value = '2026-11-06';
 
   function navegarParaDiaSelecionado() {
     if (selDia.value) window.location.href = 'historico/' + selDia.value + '/painel.html';
