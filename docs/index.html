@@ -126,19 +126,23 @@ body.bloqueado > *:not(.bloqueio) { display: none !important; }
 <header>
   <h1>Cargas otimizadas</h1>
   <div class="marca">Distribuidora OG de Bebidas &middot; Revendedor Autorizado Heineken</div>
-  <div class="sub">Atualizado em 12/11/2026 22:27</div>
+  <div class="sub">Atualizado em 13/11/2026 22:04</div>
 </header>
 <div class="filtro-data">
   <label for="seletorAno">Ver rotas de:</label>
   <select id="seletorAno" class="compacta"></select>
   <select id="seletorMes" class="compacta"></select>
-  <select id="seletorData"><option value="2026-11-12">12/11/2026 (hoje)</option></select>
+  <select id="seletorData"><option value="2026-11-13">13/11/2026 (hoje)</option></select>
   <a href="index.html">Ir para hoje</a>
 </div>
 <a class="link-painel" href="painel.html">Ver painel do supervisor (todas as rotas)</a><main>
   <ul class="lista-rotas">
-    <li><a href="rotas/RMB-6G42-Motorista-728.html">RMB-6G42 - Motorista 728 <small>33 paradas &middot; 38.8 km</small></a></li>
-    <li><a href="rotas/RMB-6G43-Motorista-730.html">RMB-6G43 - Motorista 730 <small>39 paradas &middot; 38.9 km</small></a></li>
+    <li><a href="rotas/RMB-6G42-Motorista-728.html">RMB-6G42 - Motorista 728 <small>32 paradas &middot; 111.9 km</small></a></li>
+    <li><a href="rotas/TVA-5A26-Motorista-729.html">TVA-5A26 - Motorista 729 <small>37 paradas &middot; 239.5 km</small></a></li>
+    <li><a href="rotas/TVA-6H37-Motorista-726.html">TVA-6H37 - Motorista 726 <small>47 paradas &middot; 321.9 km</small></a></li>
+    <li><a href="rotas/RMB-6G44-Motorista-725.html">RMB-6G44 - Motorista 725 <small>85 paradas &middot; 405.5 km</small></a></li>
+    <li><a href="rotas/RMB-6G43-Motorista-730.html">RMB-6G43 - Motorista 730 <small>30 paradas &middot; 34.8 km</small></a></li>
+    <li><a href="rotas/RMB-6G37-Motorista-723.html">RMB-6G37 - Motorista 723 <small>25 paradas &middot; 29.7 km</small></a></li>
   </ul>
 </main>
 <footer>Gerado automaticamente a partir do relatorio do dia.</footer>
@@ -191,12 +195,12 @@ fetch('historico/manifest.json').then(r => r.json()).then(dias => {
     if (diasDoMes.length) selDia.value = diasDoMes[0].data;
   }
 
-  const anoAtual = '2026-11-12'.slice(0, 4);
-  const mesAtual = '2026-11-12'.slice(5, 7);
+  const anoAtual = '2026-11-13'.slice(0, 4);
+  const mesAtual = '2026-11-13'.slice(5, 7);
   popularAnos(anoAtual);
   popularMeses(selAno.value, mesAtual);
   popularDias(selAno.value, selMes.value);
-  selDia.value = '2026-11-12';
+  selDia.value = '2026-11-13';
 
   function navegarParaDiaSelecionado() {
     if (selDia.value) window.location.href = 'historico/' + selDia.value + '/index.html';
