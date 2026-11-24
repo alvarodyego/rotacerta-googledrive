@@ -201,29 +201,41 @@ try {
   console.error('Firebase nao inicializou (marcacao vai funcionar so neste aparelho):', e);
 }
 
-// Registra, uma vez ao abrir a pagina, a localizacao atual do aparelho (se
-// o motorista permitir) -- so' um "instantaneo" de onde ele estava no
-// momento do acesso, nao rastreamento continuo. Roda em segundo plano e
-// falha em silencio (sem alert, sem travar nada) se o GPS nao estiver
-// disponivel, o motorista negar a permissao, ou o Firestore recusar a
-// escrita -- essa funcionalidade nunca deve impedir o uso normal da rota.
+// Registra a localizacao do aparelho quando a rota e' aberta -- so' DEPOIS
+// da senha certa (chamada no inicio de iniciarPagina), para quem so' recebeu
+// o link nao gerar ponto no mapa. Guarda tambem os ultimos acessos (data,
+// precisao e aparelho) no mesmo documento, para dar para investigar um
+// ponto estranho depois. Falha em silencio: nunca atrapalha a rota.
+const LIMITE_ACESSOS_GUARDADOS = 30;
 function registrarLocalizacao() {
   if (!db || !navigator.geolocation) return;
   try {
     navigator.geolocation.getCurrentPosition(function(pos) {
       try {
         const chave = String(NUMERO_MOTORISTA || ROTA_ID);
-        db.collection('localizacao_motoristas').doc(chave).set({
-          data: DATA_ISO,
-          rota_id: ROTA_ID,
-          rotulo: ROTULO_ROTA,
-          numero_motorista: NUMERO_MOTORISTA,
-          veiculo: VEICULO_ORIGINAL,
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          precisao_m: pos.coords.accuracy,
-          maps_url: 'https://www.google.com/maps?q=' + pos.coords.latitude + ',' + pos.coords.longitude,
-          atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+        const ref = db.collection('localizacao_motoristas').doc(chave);
+        const lat = pos.coords.latitude, lon = pos.coords.longitude, precisao = pos.coords.accuracy;
+        const aparelho = String(navigator.userAgent || '').slice(0, 200);
+        const acesso = { em: new Date().toISOString(), data: DATA_ISO, rota_id: ROTA_ID,
+                          lat: lat, lon: lon, precisao_m: precisao, aparelho: aparelho };
+        db.runTransaction(function(tx) {
+          return tx.get(ref).then(function(doc) {
+            const anteriores = (doc.exists && Array.isArray(doc.data().acessos)) ? doc.data().acessos : [];
+            tx.set(ref, {
+              data: DATA_ISO,
+              rota_id: ROTA_ID,
+              rotulo: ROTULO_ROTA,
+              numero_motorista: NUMERO_MOTORISTA,
+              veiculo: VEICULO_ORIGINAL,
+              lat: lat,
+              lon: lon,
+              precisao_m: precisao,
+              aparelho: aparelho,
+              maps_url: 'https://www.google.com/maps?q=' + lat + ',' + lon,
+              atualizado_em: firebase.firestore.FieldValue.serverTimestamp(),
+              acessos: anteriores.concat([acesso]).slice(-LIMITE_ACESSOS_GUARDADOS)
+            });
+          });
         }).catch(function(err) { console.error('Falha ao registrar localizacao:', err); });
       } catch (e) { console.error('Falha ao registrar localizacao:', e); }
     }, function(err) {
@@ -233,7 +245,6 @@ function registrarLocalizacao() {
     console.error('Geolocalizacao indisponivel neste navegador:', e);
   }
 }
-registrarLocalizacao();
 
 function chaveStatus(codigo) {
   return 'status_' + DATA_ISO + '_' + codigo;
@@ -285,6 +296,7 @@ function aplicarStatus(li, status, marker, numero, temMensagem) {
 }
 
 function iniciarPagina() {
+registrarLocalizacao();  // so' depois da senha certa
 const listaEl = document.getElementById('listaParadas');
 const mapa = L.map('mapa', { preferCanvas: true });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

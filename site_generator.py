@@ -267,29 +267,41 @@ try {{
   console.error('Firebase nao inicializou (marcacao vai funcionar so neste aparelho):', e);
 }}
 
-// Registra, uma vez ao abrir a pagina, a localizacao atual do aparelho (se
-// o motorista permitir) -- so' um "instantaneo" de onde ele estava no
-// momento do acesso, nao rastreamento continuo. Roda em segundo plano e
-// falha em silencio (sem alert, sem travar nada) se o GPS nao estiver
-// disponivel, o motorista negar a permissao, ou o Firestore recusar a
-// escrita -- essa funcionalidade nunca deve impedir o uso normal da rota.
+// Registra a localizacao do aparelho quando a rota e' aberta -- so' DEPOIS
+// da senha certa (chamada no inicio de iniciarPagina), para quem so' recebeu
+// o link nao gerar ponto no mapa. Guarda tambem os ultimos acessos (data,
+// precisao e aparelho) no mesmo documento, para dar para investigar um
+// ponto estranho depois. Falha em silencio: nunca atrapalha a rota.
+const LIMITE_ACESSOS_GUARDADOS = 30;
 function registrarLocalizacao() {{
   if (!db || !navigator.geolocation) return;
   try {{
     navigator.geolocation.getCurrentPosition(function(pos) {{
       try {{
         const chave = String(NUMERO_MOTORISTA || ROTA_ID);
-        db.collection('{firestore_colecao_localizacao}').doc(chave).set({{
-          data: DATA_ISO,
-          rota_id: ROTA_ID,
-          rotulo: ROTULO_ROTA,
-          numero_motorista: NUMERO_MOTORISTA,
-          veiculo: VEICULO_ORIGINAL,
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          precisao_m: pos.coords.accuracy,
-          maps_url: 'https://www.google.com/maps?q=' + pos.coords.latitude + ',' + pos.coords.longitude,
-          atualizado_em: firebase.firestore.FieldValue.serverTimestamp()
+        const ref = db.collection('{firestore_colecao_localizacao}').doc(chave);
+        const lat = pos.coords.latitude, lon = pos.coords.longitude, precisao = pos.coords.accuracy;
+        const aparelho = String(navigator.userAgent || '').slice(0, 200);
+        const acesso = {{ em: new Date().toISOString(), data: DATA_ISO, rota_id: ROTA_ID,
+                          lat: lat, lon: lon, precisao_m: precisao, aparelho: aparelho }};
+        db.runTransaction(function(tx) {{
+          return tx.get(ref).then(function(doc) {{
+            const anteriores = (doc.exists && Array.isArray(doc.data().acessos)) ? doc.data().acessos : [];
+            tx.set(ref, {{
+              data: DATA_ISO,
+              rota_id: ROTA_ID,
+              rotulo: ROTULO_ROTA,
+              numero_motorista: NUMERO_MOTORISTA,
+              veiculo: VEICULO_ORIGINAL,
+              lat: lat,
+              lon: lon,
+              precisao_m: precisao,
+              aparelho: aparelho,
+              maps_url: 'https://www.google.com/maps?q=' + lat + ',' + lon,
+              atualizado_em: firebase.firestore.FieldValue.serverTimestamp(),
+              acessos: anteriores.concat([acesso]).slice(-LIMITE_ACESSOS_GUARDADOS)
+            }});
+          }});
         }}).catch(function(err) {{ console.error('Falha ao registrar localizacao:', err); }});
       }} catch (e) {{ console.error('Falha ao registrar localizacao:', e); }}
     }}, function(err) {{
@@ -299,7 +311,6 @@ function registrarLocalizacao() {{
     console.error('Geolocalizacao indisponivel neste navegador:', e);
   }}
 }}
-registrarLocalizacao();
 
 function chaveStatus(codigo) {{
   return 'status_' + DATA_ISO + '_' + codigo;
@@ -351,6 +362,7 @@ function aplicarStatus(li, status, marker, numero, temMensagem) {{
 }}
 
 function iniciarPagina() {{
+registrarLocalizacao();  // so' depois da senha certa
 const listaEl = document.getElementById('listaParadas');
 const mapa = L.map('mapa', {{ preferCanvas: true }});
 L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
@@ -660,6 +672,41 @@ function tempoDecorrido(timestamp) {{
   return 'ha ' + Math.round(diffMin / 60) + ' h';
 }}
 
+// Acima disso (em metros) a posicao veio estimada pela internet da operadora
+// (GPS desligado ou fraco), e pode cair ate' em outra cidade/estado.
+const LIMITE_PRECISAO_M = 1000;
+
+// Os dados de localizacao vem do Firestore, onde qualquer um pode escrever:
+// nunca colocar texto deles no HTML sem escapar.
+function escaparHtml(texto) {{
+  return String(texto).replace(/[&<>"']/g, c => ({{'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}})[c]);
+}}
+
+function descreverPrecisao(metros) {{
+  return metros >= 1000 ? '+/- ' + (metros / 1000).toFixed(1) + ' km' : '+/- ' + Math.round(metros) + ' m';
+}}
+
+function resumirAparelho(ua) {{
+  ua = String(ua || '');
+  if (/iPhone|iPad/i.test(ua)) return 'iPhone';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows/i.test(ua)) return 'Computador Windows';
+  if (/Macintosh/i.test(ua)) return 'Mac';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return ua ? 'Outro aparelho' : 'Aparelho nao informado';
+}}
+
+function listaAcessos(acessos) {{
+  if (!Array.isArray(acessos) || !acessos.length) return '';
+  const linhas = acessos.slice(-5).reverse().map(a => {{
+    const quando = a && a.em ? new Date(a.em).toLocaleString('pt-BR', {{ day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }}) : '?';
+    const precisao = Number(a && a.precisao_m) || 0;
+    const aviso = precisao > LIMITE_PRECISAO_M ? ' &#9888; aproximada' : '';
+    return escaparHtml(quando) + ' - ' + escaparHtml(descreverPrecisao(precisao)) + aviso + ' - ' + escaparHtml(resumirAparelho(a && a.aparelho));
+  }});
+  return '<br><br><b>Ultimos acessos</b><br>' + linhas.join('<br>');
+}}
+
 function construirMapaGeral(grupos) {{
   const mapa = L.map('mapaGeral', {{ preferCanvas: true }});
   L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
@@ -705,11 +752,27 @@ function construirMapaGeral(grupos) {{
     iconSize: [24, 24],
     iconAnchor: [12, 12]
   }});
+  const iconeAproximada = L.divIcon({{
+    className: 'icone-localizacao-aproximada',
+    html: '<div style="background:#9e9e9e;color:#fff;border-radius:50%;width:24px;height:24px;' +
+          'display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;' +
+          'border:2px dashed #fff;box-shadow:0 1px 3px rgba(0,0,0,.5);">?</div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  }});
   Object.values(ultimasLocalizacoes).forEach(loc => {{
     if (typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
-    pontos.push([loc.lat, loc.lon]);
-    L.marker([loc.lat, loc.lon], {{ icon: iconeLocalizacao, zIndexOffset: 1000 }})
-      .bindPopup('<b>' + (loc.rotulo || 'Motorista') + '</b><br>Ultima localizacao: ' + tempoDecorrido(loc.atualizado_em))
+    const aproximada = typeof loc.precisao_m === 'number' && loc.precisao_m > LIMITE_PRECISAO_M;
+    // Ponto aproximado nao entra no enquadramento do mapa (senao um ponto
+    // estimado em outro estado afasta o zoom de todas as entregas).
+    if (!aproximada) pontos.push([loc.lat, loc.lon]);
+    let popup = '<b>' + escaparHtml(loc.rotulo || 'Motorista') + '</b><br>Ultima localizacao: ' + tempoDecorrido(loc.atualizado_em);
+    if (typeof loc.precisao_m === 'number') popup += '<br>Precisao: ' + escaparHtml(descreverPrecisao(loc.precisao_m));
+    if (loc.aparelho) popup += '<br>Aparelho: ' + escaparHtml(resumirAparelho(loc.aparelho));
+    if (aproximada) popup += '<br><span style="color:#b00020">&#9888; Localizacao aproximada: o GPS do celular estava desligado ou fraco e a posicao foi estimada pela internet da operadora. Nao e o lugar exato.</span>';
+    popup += listaAcessos(loc.acessos);
+    L.marker([loc.lat, loc.lon], {{ icon: aproximada ? iconeAproximada : iconeLocalizacao, zIndexOffset: aproximada ? 900 : 1000 }})
+      .bindPopup(popup, {{ maxWidth: 320 }})
       .addTo(mapa);
   }});
 
